@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/jing332/tts-server-go/tts"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 )
@@ -18,6 +19,9 @@ func TestGetToSsml(t *testing.T) {
 }
 
 func TestGetAudioUseContext(t *testing.T) {
+	if os.Getenv("TTS_INTEGRATION_TEST") != "1" {
+		t.Skip("设置 TTS_INTEGRATION_TEST=1 启用微软在线接口测试")
+	}
 	pro := &tts.VoiceProperty{Api: tts.ApiCreation, VoiceName: "zh-CN-XiaoxiaoNeural",
 		VoiceId:   "5f55541d-c844-4e04-a7f8-1723ffbea4a9",
 		Prosody:   &tts.Prosody{Rate: 0, Pitch: 0, Volume: 0},
@@ -26,21 +30,15 @@ func TestGetAudioUseContext(t *testing.T) {
 	text := "我是测试文本"
 	format := "audio-48khz-96kbitrate-mono-mp3"
 
-	ctx, _ := context.WithCancel(context.Background())
-	c := &TTS{Client: &http.Client{Timeout: time.Second * 2}}
-	go func() {
-		//time.Sleep(500)
-		//t.Log("canceled")
-		//cancel()
-	}()
-
-	for i := 0; i < 1000; i++ {
-		data, err := c.GetAudioUseContext(ctx, text, format, pro)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Log(len(data))
-		time.Sleep(5 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	c := &TTS{Client: &http.Client{Timeout: 5 * time.Second}}
+	data, err := c.GetAudioUseContext(ctx, text, format, pro)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data) == 0 {
+		t.Fatal("返回空音频")
 	}
 
 }
@@ -84,6 +82,9 @@ func TestGetAudioUseContext(t *testing.T) {
 //}
 
 func TestAuthToken(t *testing.T) {
+	if os.Getenv("TTS_INTEGRATION_TEST") != "1" {
+		t.Skip("设置 TTS_INTEGRATION_TEST=1 启用微软在线接口测试")
+	}
 	token, err := GetToken()
 	if err != nil {
 		t.Fatal(err)
@@ -92,6 +93,9 @@ func TestAuthToken(t *testing.T) {
 }
 
 func TestVoices(t *testing.T) {
+	if os.Getenv("TTS_INTEGRATION_TEST") != "1" {
+		t.Skip("设置 TTS_INTEGRATION_TEST=1 启用微软在线接口测试")
+	}
 	token, err := GetToken()
 	if err != nil {
 		t.Fatal(err)

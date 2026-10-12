@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/websocket"
 	tsg "github.com/jing332/tts-server-go"
 	log "github.com/sirupsen/logrus"
-	"math/rand"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"strings"
@@ -48,8 +48,7 @@ func (t *TTS) NewConn() error {
 		dialer := &net.Dialer{}
 		dl.NetDial = func(network, addr string) (net.Conn, error) {
 			if addr == "speech.platform.bing.com:443" {
-				rand.Seed(time.Now().Unix())
-				i := rand.Intn(len(ChinaIpList))
+				i := rand.IntN(len(ChinaIpList))
 				addr = fmt.Sprintf("%s:443", ChinaIpList[i])
 			}
 			log.Infoln("connect to IP: " + addr)

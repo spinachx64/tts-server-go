@@ -1,29 +1,33 @@
 package server
 
 import (
-	log "github.com/sirupsen/logrus"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
 
 func TestShutdown(t *testing.T) {
-	s := &GracefulServer{}
+	s := &GracefulServer{shutdownLoad: make(chan struct{})}
 	s.HandleFunc()
-	/*网页访问触发 用来测试关闭服务*/
-	s.serveMux.HandleFunc("/shutdown", func(writer http.ResponseWriter, request *http.Request) {
-		go func() {
-			err := s.Shutdown(time.Second * 10)
-			if err != nil {
-				log.Warnln(err)
-			}
-
-		}()
-	})
-
-	err := s.ListenAndServe(1233)
+	srv := httptest.NewServer(s.serveMux)
+	defer srv.Close()
+	s.Server = srv.Config
+	done := s.shutdownLoad
+	resp, err := srv.Client().Get(srv.URL + "/")
 	if err != nil {
-		log.Println(err)
-		return
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("首页状态码: %d", resp.StatusCode)
+	}
+	if err := s.Shutdown(time.Second); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-done:
+	default:
+		t.Fatal("关闭后未通知等待方")
 	}
 }

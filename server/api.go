@@ -105,7 +105,7 @@ func (s *GracefulServer) Shutdown(timeout time.Duration) error {
 	defer cancel()
 	err := s.Server.Shutdown(ctx)
 	if err != nil {
-		return fmt.Errorf("shutdown失败: %d", err)
+		return fmt.Errorf("shutdown失败: %w", err)
 	}
 
 	close(s.shutdownLoad)
@@ -220,7 +220,7 @@ func (s *GracefulServer) azureAPIHandler(w http.ResponseWriter, r *http.Request)
 
 	if audioCache != nil {
 		if audioCache.ssml == ssml {
-			log.Infoln("与上次超时断开时音频SSML一致, 使用缓存...\n")
+			log.Infoln("与上次超时断开时音频SSML一致, 使用缓存...")
 			err := writeAudioData(w, audioCache.audioData, format)
 			if err != nil {
 				log.Warnln(err)
