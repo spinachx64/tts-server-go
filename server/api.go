@@ -18,7 +18,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/jing332/tts-server-go/tts/azure"
 	"github.com/jing332/tts-server-go/tts/creation"
-	"github.com/jing332/tts-server-go/tts/edge"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -51,7 +50,11 @@ func (s *GracefulServer) HandleFunc() {
 	s.serveMux.Handle("/api/azure", http.TimeoutHandler(http.HandlerFunc(s.azureAPIHandler), 30*time.Second, "timeout"))
 	s.serveMux.Handle("/api/azure/voices", http.TimeoutHandler(http.HandlerFunc(s.azureVoicesAPIHandler), 30*time.Second, "timeout"))
 
-	s.serveMux.Handle("/api/ra", http.TimeoutHandler(http.HandlerFunc(s.edgeAPIHandler), 30*time.Second, "timeout"))
+	edgeHandler := http.TimeoutHandler(http.HandlerFunc(s.edgeAPIHandler), 30*time.Second, `{"error":"request timeout"}`)
+	s.serveMux.Handle("/api/ra", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		edgeHandler.ServeHTTP(w, r)
+	}))
 
 	s.serveMux.Handle("/api/creation", http.TimeoutHandler(http.HandlerFunc(s.creationAPIHandler), 30*time.Second, "timeout"))
 	s.serveMux.Handle("/api/creation/voices", http.TimeoutHandler(http.HandlerFunc(s.creationVoicesAPIHandler), 30*time.Second, "timeout"))
@@ -86,10 +89,6 @@ func (s *GracefulServer) ListenAndServe(port int64) error {
 
 // Close 强制关闭，会终止连接
 func (s *GracefulServer) Close() {
-	if ttsEdge != nil {
-		ttsEdge.CloseConn()
-		ttsEdge = nil
-	}
 	if ttsAzure != nil {
 		ttsAzure.CloseConn()
 		ttsAzure = nil
@@ -119,79 +118,13 @@ func (s *GracefulServer) verifyToken(w http.ResponseWriter, r *http.Request) boo
 	if s.Token != "" {
 		token := r.Header.Get("Token")
 		if s.Token != token {
-			log.Warnf("无效的Token: %s, 远程地址: %s", token, r.RemoteAddr)
+			log.Warnf("无效的Token, 远程地址: %s", r.RemoteAddr)
 			w.WriteHeader(http.StatusUnauthorized)
 			_, _ = w.Write([]byte("无效的Token"))
 			return false
 		}
 	}
 	return true
-}
-
-var ttsEdge *edge.TTS
-
-// Microsoft Edge 大声朗读接口
-func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) {
-	s.edgeLock.Lock()
-	defer s.edgeLock.Unlock()
-	defer r.Body.Close()
-	pass := s.verifyToken(w, r)
-	if !pass {
-		return
-	}
-
-	startTime := time.Now()
-	body, _ := io.ReadAll(r.Body)
-	ssml := string(body)
-	format := r.Header.Get("Format")
-
-	log.Infoln("接收到SSML(Edge):", ssml)
-	if ttsEdge == nil {
-		ttsEdge = &edge.TTS{DnsLookupEnabled: s.UseDnsEdge}
-	}
-
-	var succeed = make(chan []byte)
-	var failed = make(chan error)
-	go func() {
-		for i := 0; i < 3; i++ { /* 循环3次, 成功则return */
-			data, err := ttsEdge.GetAudio(ssml, format)
-			if err != nil {
-				if websocket.IsCloseError(err, websocket.CloseAbnormalClosure) { /* 1006异常断开 */
-					log.Infoln("异常断开, 自动重连...")
-					time.Sleep(1000) /* 等待一秒 */
-				} else { /* 正常性错误，如SSML格式错误 */
-					failed <- err
-					return
-				}
-			} else { /* 成功 */
-				succeed <- data
-				return
-			}
-		}
-	}()
-
-	select { /* 阻塞 等待结果 */
-	case data := <-succeed: /* 成功接收到音频 */
-		log.Infof("音频下载完成, 大小：%dKB", len(data)/1024)
-		err := writeAudioData(w, data, format)
-		if err != nil {
-			log.Warnln(err)
-		}
-	case reason := <-failed: /* 失败 */
-		ttsEdge.CloseConn()
-		ttsEdge = nil
-		writeErrorData(w, http.StatusInternalServerError, "获取音频失败(Edge): "+reason.Error())
-	case <-r.Context().Done(): /* 与阅读APP断开连接 超时15s */
-		log.Warnln("客户端(阅读APP)连接 超时关闭/意外断开")
-		select { /* 3s内如果成功下载, 就保留与微软服务器的连接 */
-		case <-succeed:
-			log.Debugln("断开后3s内成功下载")
-		case <-time.After(time.Second * 3): /* 抛弃WebSocket连接 */
-			ttsEdge.CloseConn()
-			ttsEdge = nil
-		}
-	}
-	log.Infof("耗时：%dms\n", time.Since(startTime).Milliseconds())
 }
 
 type LastAudioCache struct {

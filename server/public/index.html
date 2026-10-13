@@ -269,14 +269,14 @@
     }
 
     function preview() {
-        let headers = {'Content-Type': 'text/plain'};
+        let headers = {'Content-Type': 'application/json'};
         let voiceName = document.getElementsByName('voiceName')[0].value;
         let previewText = document.getElementsByName('previewText')[0].value;
-        let ssml = createSSML(previewText, voiceName)
+        let payload = {text: previewText, voice: voiceName, response_format: 'audio'}
         let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
         let token = document.getElementsByName('token')[0].value;
 
-        headers['Format'] = voiceFormat
+        payload.format = voiceFormat
         localStorage.setItem("token", token)
         if (token) headers['Token'] = token
 
@@ -289,7 +289,7 @@
         fetch('/api/ra', {
             method: 'post',
             headers: headers,
-            body: ssml
+            body: JSON.stringify(payload)
         }).then(response => {
             if (response.status === 200) {
                 let audioSize = response.headers.get("Content-Length")

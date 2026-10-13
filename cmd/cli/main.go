@@ -11,8 +11,8 @@ import (
 )
 
 var port = flag.Int64("port", 1233, "自定义监听端口")
-var token = flag.String("token", "", "使用token验证")
-var useDnsEdge = flag.Bool("use-dns-edge", false, "使用DNS解析Edge接口，而不是内置的北京微软云节点。")
+var token = flag.String("token", "", "自定义访问令牌；客户端通过Token请求头发送，默认不验证")
+var useDnsEdge = flag.Bool("use-dns-edge", false, "兼容旧参数；Edge新接口始终使用DNS解析。")
 
 func main() {
 	log.SetFormatter(&logformat.Formatter{HideKeys: true,
@@ -20,7 +20,7 @@ func main() {
 	})
 	flag.Parse()
 	if *token != "" {
-		log.Info("使用Token: ", token)
+		log.Info("已启用Token验证")
 	}
 	if *useDnsEdge == true {
 		log.Infof("使用DNS解析Edge接口")

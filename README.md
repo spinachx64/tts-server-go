@@ -1,72 +1,118 @@
-![MIT](https://img.shields.io/badge/license-MIT-green)
-[![CI](https://github.com/jing332/tts-server-go/actions/workflows/main.yml/badge.svg)](https://github.com/jing332/tts-server-go/actions/workflows/main.yml)
-[![Test](https://github.com/jing332/tts-server-go/actions/workflows/test.yml/badge.svg)](https://github.com/jing332/tts-server-go/actions/workflows/test.yml)
-![GitHub release (latest by date)](https://img.shields.io/github/downloads/jing332/tts-server-go/latest/total)
+# tts-server-go
 
-# 安卓系统推荐使用 tts-server-android 安装即用
-https://github.com/jing332/tts-server-android
+基于 Go 的 HTTP 文本转语音服务，调用微软在线语音接口，提供网页试听、音色选择和阅读（Legado）APP 配置导入。
+Edge 渠道使用纯 Go 实现，支持语速、音量、音高、代理、长文本分段及 SRT 字幕，无需安装 Python 或 edge-tts。
 
-# 下载
-请从 [Release](https://github.com/jing332/tts-server-go/releases) 下载稳定版。
+完整的请求参数、响应格式和调用示例见 **[API 接口文档](docs/API.md)**。
 
-或者从 [Actions](https://github.com/jing332/tts-server-go/actions) 下载最新代码构建程序。
+## 渠道与接口状态
 
-# 使用方法
-直接运行，默认监听1233端口。
+以下为 **2026-10-13** 在本机和 cook 独立测试实例上的结果，后续可用性以在线检测为准。
 
-然后浏览器 `http://localhost:1233` 打开网页，选好配置导入阅读后即可朗读。
+| 渠道 | 合成接口 | 输入协议 | 音频合成 | 音色列表 |
+|---|---|---|---|---|
+| Edge | `/api/ra` | JSON | 可用，MP3 / WebM；MP3 可返回 SRT | 可用，通过 `/api/ra` 查询 |
+| Azure 演示服务 | `/api/azure` | SSML | 可用 | `/api/azure/voices` 可用 |
+| Creation / Speech Studio | `/api/creation` | JSON | 不可用，上游认证 401 | `/api/creation/voices` 同样认证失败 |
 
-# 提示
+Edge 测试中曾出现微软 429 限流，单独复测成功。Creation 路由保留，暂不建议用于正常合成。
+服务另外提供 `/api/legado` 生成阅读 APP 配置，`/` 为网页配置界面。
 
-接口与[ms-ra-forwarder](https://github.com/wxxxcxx/ms-ra-forwarder) 相同:
+## 构建与启动
 
-微软Azure接口(延迟高): `http://localhost:1233/api/azure`
-
-Edge大声朗读接口: `http://localhost:1233/api/ra`
-
-## 本地开发（Go 1.26.1）
-
-当前项目已按 Go 1.26.1（macOS arm64）完成构建和本地测试兼容调整。
+需要 Go 1.26.1 或更高版本，合成时需要联网。
 
 ```sh
 go build -o output/tts-server-go ./cmd/cli
-./output/tts-server-go -use-dns-edge
+./output/tts-server-go -port 1233 -token my-tts-secret
 ```
 
-打开 http://localhost:1233 配置朗读。也可以直接运行：
+也可以直接运行源码：
 
 ```sh
-go run ./cmd/cli -port 1233 -use-dns-edge
+go run ./cmd/cli -port 1233 -token my-tts-secret
 ```
 
-可选参数：`-port` 指定端口；`-token` 设置合成接口验证令牌（请求头 `Token`）；
-`-use-dns-edge` 使用 DNS 解析 Edge 服务，避免使用内置旧 IP 列表。
+打开 `http://localhost:1233` 选择音色、试听或生成阅读 APP 导入配置。
+服务监听所有网卡，其他设备使用 `http://服务器IP:1233` 访问。
 
-## 项目功能
+| 启动参数 | 默认值 | 说明 |
+|---|---|---|
+| `-port` | `1233` | HTTP 服务端口 |
+| `-token` | 空 | 自定义访问令牌；空值表示不验证 |
+| `-use-dns-edge` | `false` | 保留兼容旧命令；Edge 始终使用 DNS，取值不影响连接 |
 
-这是一个调用微软在线语音接口的 HTTP 文本转语音服务，需要联网。
+Token 是你自己设置的服务访问密码，没有固定值，也不需要向微软申请。
+例如使用 `-token my-tts-secret` 启动，客户端就发送请求头 `Token: my-tts-secret`。
+它与微软接口的内部客户端令牌无关，验证范围见 [Token 说明](docs/API.md#token-验证)。
 
-- 内置网页用于选择发音人、音频格式和朗读配置，生成并导入阅读（Legado）APP 的朗读引擎。
-- `/api/ra`：Edge 大声朗读，POST SSML，使用 `Format` 请求头指定音频格式。
-- `/api/azure`：Azure 演示语音合成，POST SSML，支持发音人提供的风格、角色等配置。
-- `/api/creation`：Speech Studio Creation 合成，POST JSON，包含文本、发音人、语速、音量、风格和音频格式。
-- `/api/azure/voices`、`/api/creation/voices`：获取在线发音人数据。
-- `/api/legado`：生成阅读 APP 的导入配置。
+## Edge 快速调用
 
-这些是旧版微软演示/消费端接口。此次本机实测：Edge 返回 403，Creation 认证返回 401，
-Azure WebSocket 连接超时。Go 编译、测试通过不代表这些在线接口仍可合成语音；
-恢复合成需要另行更新微软接口协议或接入正式 Azure Speech 服务。
+直接下载 MP3：
 
-## 测试
+```sh
+curl http://localhost:1233/api/ra \
+  -H 'Content-Type: application/json' \
+  -H 'Token: my-tts-secret' \
+  --data '{"text":"你好，欢迎使用语音合成。","voice":"zh-CN-XiaoxiaoNeural","rate":"-10%","response_format":"audio"}' \
+  -o hello.mp3
+```
+
+需要音频和字幕时，使用默认的 JSON 响应：
+
+```sh
+curl http://localhost:1233/api/ra \
+  -H 'Content-Type: application/json' \
+  -H 'Token: my-tts-secret' \
+  --data '{"text":"你好。","voice":"zh-CN-XiaoxiaoNeural","write_subtitles":"hello.srt"}' \
+  -o result.json
+```
+
+响应的 `audio` 为 Base64 音频，`subtitles` 为 SRT 文本。解码、文件输入、代理和音色查询示例见 [API 文档](docs/API.md)。
+
+## 兼容性说明
+
+- `/api/ra` 已由 SSML 改为 JSON，请发送 `Content-Type: application/json`，音频格式放在 JSON 的 `format` 字段中。
+- 默认响应是 JSON；网页和阅读 APP 使用 `response_format: "audio"` 播放音频。旧版阅读配置需要重新生成并导入。
+- Azure 仍接收 SSML 和 `Format` 请求头，Creation 仍使用原有 JSON 协议。
+- Edge 连接超时和整个请求处理超时均为 30 秒。长文本自动分段，但仍受整个请求的超时限制。
+- Edge 合成地址已参考 [edge-tts 修复提案 #491](https://github.com/rany2/edge-tts/pull/491) 切换至 `api.msedgeservices.com`，包含 GEC 校验、MUID 和 403 校时重试，不再连接旧固定 IP。
+
+## 检查与测试
+
+离线测试及静态检查：
 
 ```sh
 go test -timeout 30s ./...
 go vet ./...
+go test -race -timeout 30s ./server ./tts/edge
 ```
 
-默认测试无需访问微软服务，关闭服务测试会自动完成。
-在线接口测试需显式启用，且可能因上游接口变化或网络原因失败：
+启动服务后，运行在线 API 检测脚本（需要 Python 3 标准库）：
+
+```sh
+python3 scripts/test_apis.py --url http://localhost:1233 --token my-tts-secret
+# 同时验证文件输入、语速/音量/音高、音频响应和长文本字幕
+python3 scripts/test_apis.py --url http://localhost:1233 --token my-tts-secret --extended
+```
+
+结果默认保存到 `output/api-test/report.json`，原始响应、成功的 MP3 和 SRT 也会保存。
+使用 `--output` 指定目录；`--edge-protocol ssml` 可用于对比迁移前的旧服务。
+脚本逐项检查各渠道的合成与音色列表，任一接口失败时退出码为 1。当前 Creation 不可用，因此完整检测通常返回 1，请查看各项结果。
+
+直接运行包内的在线接口测试：
 
 ```sh
 TTS_INTEGRATION_TEST=1 go test -timeout 60s ./tts/edge ./tts/azure ./tts/creation
 ```
+
+在线测试可能因上游协议、限流或网络而失败；编译与离线测试通过不代表在线渠道可用。
+
+## 上游与相关项目
+
+- 原项目：[jing332/tts-server-go](https://github.com/jing332/tts-server-go)
+- 原项目发布包：[Releases](https://github.com/jing332/tts-server-go/releases)；最新构建：[Actions](https://github.com/jing332/tts-server-go/actions)
+- 安卓版：[tts-server-android](https://github.com/jing332/tts-server-android)
+- Edge 协议参考：[rany2/edge-tts](https://github.com/rany2/edge-tts)
+
+原项目标注为 MIT 许可证。

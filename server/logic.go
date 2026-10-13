@@ -76,6 +76,16 @@ const (
 
 /* 生成阅读APP朗读朗读引擎Json (Edge, Azure) */
 func genLegadoJson(api, name, voiceName, secondaryLocale, styleName, styleDegree, roleName, voiceFormat, token, concurrentRate string) ([]byte, error) {
+	if strings.HasSuffix(strings.TrimRight(api, "/"), "/api/ra") {
+		voiceJSON, _ := json.Marshal(voiceName)
+		formatJSON, _ := json.Marshal(voiceFormat)
+		request, _ := json.Marshal(map[string]string{
+			"method": "POST",
+			"body":   "{{JSON.stringify({text:String(speakText),voice:" + string(voiceJSON) + ",rate:String((speakSpeed-10)*2)+'%',format:" + string(formatJSON) + ",response_format:'audio'})}}",
+		})
+		head, _ := json.Marshal(map[string]string{"Content-Type": "application/json", "Token": token})
+		return json.Marshal(&LegadoJson{Name: name, URL: api + "," + string(request), ID: time.Now().UnixMilli(), LastUpdateTime: time.Now().UnixMilli(), ContentType: formatContentType(voiceFormat), Header: string(head), ConcurrentRate: concurrentRate})
+	}
 	t := time.Now().UnixNano() / 1e6 //毫秒时间戳
 	var url string
 	if styleName == "" { /* Edge大声朗读 */
