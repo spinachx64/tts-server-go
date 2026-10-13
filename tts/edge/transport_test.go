@@ -68,13 +68,15 @@ func TestReadTurnCancellation(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	timer := time.AfterFunc(50*time.Millisecond, cancel)
+	defer timer.Stop()
 	_, err = readTurn(ctx, conn, "<speak/>", "audio-24khz-48kbitrate-mono-mp3", false, 0)
 	if err == nil {
 		t.Fatal("canceled request returned success")
 	}
-	if ctx.Err() != context.DeadlineExceeded {
+	if ctx.Err() != context.Canceled {
 		t.Fatalf("wrong cancellation: %v", ctx.Err())
 	}
 }
