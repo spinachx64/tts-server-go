@@ -2,3 +2,8 @@
 /.idea/
 /*.exe
 *.mp3
+
+# Local deployment credentials
+/cook-tts-deploy
+/cook-tts-deploy.pub
+/cook-known-hosts

@@ -1,0 +1,126 @@
+name: Build and deploy to cook
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'server/public/**'
+      - 'deploy/**'
+      - 'scripts/test_deploy.sh'
+      - '.github/workflows/deploy-cook.yml'
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cook-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Test and vet
+        run: |
+          go test -timeout 60s ./...
+          go vet ./...
+          go test -race -timeout 60s ./server ./tts/edge
+          bash scripts/test_deploy.sh
+      - name: Build Linux amd64 binary
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: '0'
+        run: |
+          mkdir -p dist
+          go build -trimpath -ldflags='-s -w' -o dist/tts-server-go ./cmd/cli
+          cd dist
+          sha256sum tts-server-go > SHA256SUMS
+          tar -czf bundle.tar.gz tts-server-go SHA256SUMS
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tts-server-go-linux-amd64-${{ github.sha }}
+          path: dist/bundle.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment: cook
+    timeout-minutes: 10
+    env:
+      COOK_HOST: ${{ secrets.COOK_HOST }}
+      COOK_USER: ${{ secrets.COOK_USER }}
+      COOK_SSH_KEY: ${{ secrets.COOK_SSH_KEY }}
+      COOK_KNOWN_HOSTS: ${{ secrets.COOK_KNOWN_HOSTS }}
+      COOK_SSH_PORT: ${{ vars.COOK_SSH_PORT || '22' }}
+      COOK_API_PORT: ${{ vars.COOK_API_PORT || '1233' }}
+      RELEASE_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Check deployment configuration
+        id: config
+        shell: bash
+        run: |
+          set -euo pipefail
+          configured=0
+          for name in COOK_HOST COOK_USER COOK_SSH_KEY COOK_KNOWN_HOSTS; do
+            if [[ -n ${!name} ]]; then configured=$((configured + 1)); fi
+          done
+          if [[ $configured == 0 ]]; then
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::Build succeeded; deployment skipped. Configure the four COOK_* secrets and run the workflow again.'
+            echo 'Deployment skipped: missing COOK_* secrets. See docs/DEPLOY.md.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [[ $configured != 4 ]]; then
+            echo '::error::Deployment requires COOK_HOST, COOK_USER, COOK_SSH_KEY and COOK_KNOWN_HOSTS.'
+            exit 1
+          fi
+          [[ $COOK_USER =~ ^[a-z_][a-z0-9_-]*$ ]] || exit 1
+          [[ $COOK_HOST =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]] || exit 1
+          [[ $COOK_SSH_PORT =~ ^[0-9]+$ ]] && ((COOK_SSH_PORT >= 1 && COOK_SSH_PORT <= 65535)) || exit 1
+          [[ $COOK_API_PORT =~ ^[0-9]+$ ]] && ((COOK_API_PORT >= 1 && COOK_API_PORT <= 65535)) || exit 1
+          echo 'ready=true' >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v8
+        if: steps.config.outputs.ready == 'true'
+        with:
+          name: tts-server-go-linux-amd64-${{ github.sha }}
+          path: dist
+      - name: Configure SSH
+        if: steps.config.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          umask 077
+          printf '%s\n' "$COOK_SSH_KEY" > "$HOME/.ssh/cook_key"
+          printf '%s\n' "$COOK_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          ssh-keygen -y -f "$HOME/.ssh/cook_key" >/dev/null
+      - name: Upload and activate release
+        if: steps.config.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh_options=(-i "$HOME/.ssh/cook_key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15)
+          scp "${ssh_options[@]}" -P "$COOK_SSH_PORT" dist/bundle.tar.gz "$COOK_USER@$COOK_HOST:/opt/tts-server-go/incoming/$RELEASE_ID.tar.gz"
+          ssh "${ssh_options[@]}" -p "$COOK_SSH_PORT" "$COOK_USER@$COOK_HOST" "/usr/local/libexec/tts-server-go-deploy $RELEASE_ID $COOK_API_PORT"
+          echo "Deployed commit $GITHUB_SHA to cook; release $RELEASE_ID." >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove SSH credentials
+        if: always()
+        run: rm -f "$HOME/.ssh/cook_key"

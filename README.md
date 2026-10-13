@@ -70,6 +70,12 @@ curl http://localhost:1233/api/ra \
 
 响应的 `audio` 为 Base64 音频，`subtitles` 为 SRT 文本。解码、文件输入、代理和音色查询示例见 [API 文档](docs/API.md)。
 
+## 自动构建与部署
+
+GitHub Actions 工作流 **Build and deploy to cook** 在 `master` 的源码等变更后自动测试、构建 Linux amd64 二进制，配置部署 Secrets 后通过 SSH 上传到 cook 并重启 systemd 服务。支持手动触发、SHA-256 校验、健康检查和失败回滚。
+
+服务器初始化、Token 设置、SSH 密钥以及 Secrets 清单见 **[部署文档](docs/DEPLOY.md)**。服务器不需要安装 Go、Python 或 edge-tts。
+
 ## 兼容性说明
 
 - `/api/ra` 已由 SSML 改为 JSON，请发送 `Content-Type: application/json`，音频格式放在 JSON 的 `format` 字段中。

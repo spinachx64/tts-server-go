@@ -1,0 +1,24 @@
+[Unit]
+Description=Go Microsoft text-to-speech API
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=tts
+Group=tts
+WorkingDirectory=/opt/tts-server-go/current
+EnvironmentFile=/etc/tts-server-go.env
+ExecStart=/opt/tts-server-go/current/tts-server-go -port ${TTS_PORT} -token ${TTS_TOKEN}
+Restart=on-failure
+RestartSec=3
+KillSignal=SIGINT
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target
