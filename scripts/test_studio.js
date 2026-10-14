@@ -1,0 +1,57 @@
+#!/usr/bin/env node
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const path=require('node:path');
+const {StudioProtocol:protocol}=require('../server/public/studio-protocol.js');
+const p={text:'你好 < & "世界"\u0001',voice:'zh-CN-XiaoxiaoNeural',rate:'-10%',volume:'-20%',pitch:'+5Hz',format:'audio-24khz-48kbitrate-mono-mp3',style:'cheerful',styleDegree:'1.5',role:'Narrator',secondaryLocale:'zh-CN'};
+const azure=protocol.buildRequest('azure',p,'test-token');
+assert.equal(azure.url,'/api/azure');assert.equal(azure.headers.Token,'test-token');assert.equal(azure.headers.Format,p.format);assert.equal(azure.headers['Content-Type'],'application/ssml+xml');
+assert(azure.body.includes('你好 &lt; &amp; &quot;世界&quot; '));assert(azure.body.includes('style="cheerful"'));assert(azure.body.includes('role="Narrator"'));assert(azure.body.includes('<lang xml:lang="zh-CN">'));assert(azure.body.includes('pitch="+5Hz"'));
+assert(!protocol.azureSSML({...p,style:'general',role:'default',secondaryLocale:''}).includes('<mstts:express-as'));
+const edge=protocol.buildRequest('edge',{text:'你好',write_subtitles:true},'');assert.equal(edge.url,'/api/ra');assert(!('Token' in edge.headers));assert.equal(JSON.parse(edge.body).write_subtitles,true);
+assert.equal(protocol.filename('riff-24khz-16bit-mono-pcm'),'audio.wav');assert.equal(protocol.filename('raw-16khz-16bit-mono-pcm'),'audio.pcm');
+// Execute the UI controller with a small DOM fixture and controlled HTTP responses.
+// This checks channel isolation and asynchronous voice-list races, without a browser.
+const html=fs.readFileSync(path.join(__dirname,'../server/public/index.html'),'utf8');
+class Element {
+ constructor(id,tag,attrs){this.id=id;this.tag=tag;this._value=attrs.value||'';this.hidden='hidden' in attrs;this.checked=false;this.disabled=false;this.textContent='';this.options=[];this.listeners={};this.classList={toggle(){},add(){},remove(){}};this.attributes={};}
+ get value(){return this._value;}
+ set value(v){this._value=String(v);}
+ replaceChildren(...options){this.options=options;if(this.tag==='select')this._value=options[0]?.value||'';}
+ addEventListener(name,fn){this.listeners[name]=fn;}
+ setAttribute(name,value){this.attributes[name]=value;}
+ removeAttribute(name){delete this.attributes[name];}
+ pause(){} load(){} focus(){} closest(){return {open:false};}
+}
+const elements={};
+for(const match of html.matchAll(/<([a-z]+)\b([^>]*\bid="([^"]+)"[^>]*)>/g)){
+ const attrs={};for(const a of match[2].matchAll(/([\w-]+)(?:="([^"]*)")?/g))attrs[a[1]]=a[2]||'';
+ elements[match[3]]=new Element(match[3],match[1],attrs);
+}
+elements.previewText.value='测试文字';
+const calls=[];const pending=[];const windowEvents={};
+const sandbox={console,AbortController,setTimeout,clearTimeout,URL,URLSearchParams,Option:class {constructor(text,value){this.text=text;this.value=value;}},document:{getElementById:id=>{assert(elements[id],'missing '+id);return elements[id];},querySelectorAll:()=>[],addEventListener(){}},window:{addEventListener:(name,fn)=>windowEvents[name]=fn},location:{hash:'#edge',origin:'http://localhost:1233'},history:{replaceState(){}},localStorage:{getItem:()=>''},fetch:(url,options)=>{calls.push({url,options});return new Promise(resolve=>pending.push(resolve));}};
+sandbox.StudioProtocol=protocol;
+vm.createContext(sandbox);vm.runInContext(fs.readFileSync(path.join(__dirname,'../server/public/studio.js'),'utf8'),sandbox);
+const edgeList=[{ShortName:'zh-CN-XiaoxiaoNeural',Locale:'zh-CN',Gender:'Female'}];
+const azureList=[{...edgeList[0],LocalName:'晓晓',StyleList:['cheerful'],RolePlayList:['Narrator'],SecondaryLocaleList:['en-US']}];
+const response=data=>({ok:true,json:async()=>data});
+const flush=()=>new Promise(resolve=>setImmediate(resolve));
+(async()=>{
+ assert.equal(calls[0].url,'/api/ra');assert.equal(JSON.parse(calls[0].options.body).list_voices,true);
+ // A slow Edge response must not overwrite Azure's voice list after switching.
+ sandbox.location.hash='#azure';windowEvents.hashchange();
+ assert.equal(calls[1].url,'/api/azure/voices');assert.equal(elements.endpointPath.textContent,'/api/azure');assert(elements.subtitlesControl.hidden);assert(elements.proxyField.hidden);
+ pending[1](response(azureList));await flush();pending[0](response({voices:edgeList}));await flush();
+ assert.equal(elements.styleName.disabled,false);assert.equal(elements.roleName.disabled,false);assert.equal(elements.secondaryLocaleField.hidden,false);
+ elements.styleName.value='cheerful';elements.styleName.listeners.change();elements.roleName.value='Narrator';elements.roleName.listeners.change();
+ elements.secondaryLocale.value='en-US';elements.secondaryLocale.listeners.change();sandbox.updateRequest();
+ assert(elements.requestPreview.textContent.includes('style="cheerful"'));assert(elements.requestPreview.textContent.includes('xml:lang="en-US"'));
+ sandbox.updateLegadoLink();const params=new URL(elements.legadoUrl.value).searchParams;assert(params.get('api').endsWith('/api/azure'));assert.equal(params.get('styleName'),'cheerful');assert.equal(params.get('roleName'),'Narrator');
+ sandbox.location.hash='#edge';windowEvents.hashchange();assert(!elements.subtitlesControl.hidden);assert(elements.azureOptions.hidden);pending[2](response({voices:edgeList}));await flush();
+ assert.equal(JSON.parse(elements.requestPreview.textContent).voice,'zh-CN-XiaoxiaoNeural');
+ sandbox.location.hash='#azure';windowEvents.hashchange();pending[3](response(azureList));await flush();assert.equal(elements.styleName.value,'cheerful');assert.equal(elements.roleName.value,'Narrator');
+ console.log('Studio checks passed: protocol, XML escaping, Azure capabilities, channel switching, stale responses, saved settings, Legado export.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

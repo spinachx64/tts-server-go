@@ -1,344 +1,43 @@
-<!DOCTYPE html>
-<html lang="zh">
-
+<!doctype html>
+<html lang="zh-CN">
 <head>
-    <title>Edge接口</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.staticfile.org/bootstrap/5.2.2/css/bootstrap.min.css" rel="stylesheet">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>Voice Lab · 语音工作台</title>
+<link rel="stylesheet" href="studio.css">
 </head>
-
 <body>
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
-    <div class="container-fluid">
-        <a class="navbar-brand github-button" href="https://github.com/jing332/tts-server-go" data-size="large"
-           data-show-count="true" aria-label="Star jing332/tts-server-go on GitHub">Star tts-server-go</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
-                aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link active" aria-current="page" href="/">Edge接口</a></li>
-                <li class="nav-item"><a class="nav-link" href="azure.html">Azure接口</a></li>
-                <li class="nav-item"><a class="nav-link" href="creation.html">Creation接口(已失效)</a></li>
-            </ul>
-            <p class="fst-italic">本页面源码修改自 <a href="https://github.com/wxxxcxx/ms-ra-forwarder">ms-ra-forwarder</a>
-            </p>
-        </div>
-    </div>
-</nav>
-<div class="container" style="margin-top: 30px;">
-    <div style="" class="alert alert-primary" role="alert">
-        手机版请在右上角菜单切换到其他接口
-    </div>
-    <form>
-        <div class="row">
-            <div class="col">
-                <label class="form-label">配置名称：</label>
-                <input name="name" type="text" class="form-control" value="大声朗读1233"/>
-                <div class="form-text">在阅读APP中显示的名称。</div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col">
-                <label class="form-label">语言：</label>
-                <select name="language" class="form-select" onchange="updateLanguageConfig()">
-                </select>
-                <div class="form-text">选择所用语言</div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col">
-                <label class="form-label">声音：</label>
-                <select name="voiceName" class="form-select" onchange="updateConfigName()">
-                </select>
-                <div class="form-text">声音列表加载可能有点慢，请耐心等待！</div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col">
-                <label class="form-label">音频格式：</label>
-                <select name="voiceFormat" class="form-select">
-                    <option value="webm-24khz-16bit-mono-opus" selected>webm-24khz-16bit-mono-opus</option>
-                    <option value="audio-24khz-48kbitrate-mono-mp3">audio-24khz-48kbitrate-mono-mp3</option>
-                    <option value="audio-24khz-96kbitrate-mono-mp3">audio-24khz-96kbitrate-mono-mp3</option>
-                </select>
-                <div class="form-text">
-                    <p>Edge大声朗读接口目前仅支持这些</p>
-                </div>
-            </div>
-
-            <div class="row">
-                <div>
-                    <label class="form-label">凭据（TOKEN）：</label>
-                    <input name="token" class="form-control" type="text" value="">
-                    <div class="form-text">如果没有设置 -token 命令行参数请为空。</div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col">
-                    <label class="form-label">测试文本：</label>
-                    <textarea name="previewText" class="form-control" rows="3"
-                              cols="">如果喜欢这个项目的话请点个 Star 吧。</textarea>
-                </div>
-            </div>
-            <div style="height:20px"></div>
-            <div class="row">
-                <div class="col">
-                    <label class="text-success" id="audioInfoLabel">大小: 0kb | 耗时: 0ms</label>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col">
-                    <button id="previewButton" type="button" class="btn btn-secondary"
-                            onclick="preview()">测试
-                    </button>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-primary active" onclick="createLegadoUrl()">生成导入链接</button>
-                        <button type="button" class="btn btn-primary" onclick="openSettingsModal()">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
-                                 class="bi bi-sliders" viewBox="0 0 16 16">
-                                <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
-                                <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </form>
-    <div style="height:50px"></div>
-</div>
-
-<div id="setIntervalModel" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
-     aria-labelledby="staticBackdropLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">导入链接设置</h5>
-            </div>
-            <div class="modal-body">
-                <label>
-                    并发率(请求间隔 单位:毫秒):
-                    <input class="form-control" id="intervalValue" type="number" value="5000" max="100000">
-                </label>
-            </div>
-            <i class="bi bi-gear"></i>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="
-                    localStorage.setItem('interval', document.getElementById('intervalValue').value)
-                ">保存
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="legadoUrlModal" class="modal fade" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">阅读链接</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="collapse" id="qrCodeCollapse">
-                <div class="card card-body">
-                    <div id="legadoUrlQRCode" style="margin: auto"></div>
-                </div>
-            </div>
-            <div class="modal-body">
-                <div style="position: relative">
-                    <textarea id="legadoUrl" class="form-control" readonly rows="3" cols="2"></textarea>
-                    <button id="copyBtn" class="btn btn-dark btn-sm"
-                            style="--bs-btn-font-size: 10px;position:absolute;right:0;top:0;z-index: 20"
-                            onclick="copyLegadoUrl()">复制
-                    </button>
-
-                </div>
-                <div class="alert alert-primary" role="alert">
-                    请在阅读的朗读引擎设置中选择网络导入此链接。
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#qrCodeCollapse" aria-expanded="false" aria-controls="qrCodeCollapse" onclick="onQRCodeClick()">
-                        二维码
-                    </button>
-                    <button type="button" class="btn btn-success" onclick="openAppImport()">一键导入</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script src=https://cdn.staticfile.org/github-buttons/2.22.0/buttons.min.js></script>
-<script src="https://cdn.staticfile.org/bootstrap/5.2.2/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@keeex/qrcodejs-kx@1.0.2/qrcode.min.js"></script>
-<script src="static.js?v1.0.0"></script>
-<script>
-    let token = localStorage.getItem("token")
-    document.getElementsByName('token')[0].value = token
-
-    let voices = [];
-    fetch('https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=6A5AA1D4EAFF4E9FB37E23D68491D6F4')
-        .then(response => {
-            if (response.status === 200) {
-                return response.json();
-            } else {
-                return response.text().then(text => Promise.reject(text));
-            }
-        }).then(data => {
-        voices = data;
-        refreshVoice();
-    }).catch(reason => {
-        alert(reason);
-    });
-
-    function refreshVoice() {
-        let langElement = document.getElementsByName('language')[0]
-        langElement.innerHTML = ''
-        let localeList = new Map()
-        voices.forEach(item => {
-            let friendlyName = item['FriendlyName']
-            let locale = item['Locale']
-            if (!localeList.has(locale)) {
-                localeList.set(locale, cnLocalLanguage[locale] || friendlyName.split('- ')[1])
-            }
-        });
-        //排序语言列表
-        const sortMap = new Map([...localeList.entries()].sort((a, b) => a[1].localeCompare(b[1])));
-        sortMap.forEach((value, key) => {
-            let option = document.createElement('option');
-            option.value = key
-            option.innerText = value
-            if (key === "zh-CN") option.selected = true
-            langElement.appendChild(option)
-        })
-
-        updateLanguageConfig()
-    }
-
-    function updateLanguageConfig() {
-        let voiceElement = document.getElementsByName('voiceName')[0];
-        let language = document.getElementsByName('language')[0].value
-        voiceElement.innerHTML = ''
-        let voiceMap = new Map()
-        voices.forEach(function (value, key) {
-            if (value['locale'] === language) {
-                let pro = value['properties']
-                voiceMap.set(value['shortName'], (pro['LocalName'] ?? pro['ShortName']) + '-' + pro['LocaleDescription'])
-            }
-        })
-
-        updateVoiceConfig()
-    }
-
-    function updateVoiceConfig() {
-        let voiceElement = document.getElementsByName('voiceName')[0];
-        let language = document.getElementsByName('language')[0].value;
-        voiceElement.innerHTMl = '';
-        voices.forEach(value => {
-            if (value['Locale'] === language) {
-                let option = document.createElement('option');
-                let shortName = value['ShortName']
-                option.value = shortName
-                option.innerText = cnLocalVoice[shortName] + "（" + shortName + "）" || shortName;
-                voiceElement.append(option)
-            }
-        })
-        updateConfigName()
-    }
-
-    function updateConfigName() {
-        let voice = document.getElementsByName('voiceName')[0].value;
-        document.getElementsByName('name')[0].value = '大声朗读1233（' + voice + '）';
-    }
-
-    function createSSML(text, voiceName) {
-        return '\
-        <speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="en-US">\
-          <voice name="' + voiceName + '">\
-              <prosody rate="0%" pitch="0%">\
-                  ' + text + '\
-              </prosody >\
-          </voice >\
-        </speak > ';
-    }
-
-    function preview() {
-        let headers = {'Content-Type': 'application/json'};
-        let voiceName = document.getElementsByName('voiceName')[0].value;
-        let previewText = document.getElementsByName('previewText')[0].value;
-        let payload = {text: previewText, voice: voiceName, response_format: 'audio'}
-        let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
-        let token = document.getElementsByName('token')[0].value;
-
-        payload.format = voiceFormat
-        localStorage.setItem("token", token)
-        if (token) headers['Token'] = token
-
-        let button = document.getElementById('previewButton')
-        let textInfo = document.getElementById('audioInfoLabel')
-        button.disabled = true
-        textInfo.innerText = "大小: 0kb | 耗时: 0ms"
-        let startTime = Date.now()
-        let ctx = new AudioContext();
-        fetch('/api/ra', {
-            method: 'post',
-            headers: headers,
-            body: JSON.stringify(payload)
-        }).then(response => {
-            if (response.status === 200) {
-                let audioSize = response.headers.get("Content-Length")
-                let elapsedTme = Date.now() - startTime
-                textInfo.innerText =
-                    `大小: ${unitConversion(audioSize)} | 耗时: ${elapsedTme}ms`
-                return response.arrayBuffer()
-            } else {
-                return response.text().then(text => Promise.reject(text));
-            }
-        }).then(arrayBuffer => ctx.decodeAudioData(arrayBuffer))
-            .then(audio => {
-                let player = ctx.createBufferSource();
-                player.buffer = audio;
-                player.connect(ctx.destination);
-                player.start(ctx.currentTime);
-            })
-            .catch(reason => {
-                alert(reason);
-            })
-            .finally(() => {
-                button.disabled = false
-            });
-    }
-
-    function createLegadoUrl() {
-        let name = document.getElementsByName('name')[0].value;
-        let voiceName = document.getElementsByName('voiceName')[0].value;
-        let voiceFormat = document.getElementsByName('voiceFormat')[0].value;
-        let token = document.getElementsByName('token')[0].value;
-        let interval = localStorage.getItem('interval') || 5000
-        let url = window.location.protocol + '//' + window.location.host + '/api/legado?api=' + encodeURI(window.location.protocol + '//' + window.location.host + '/api/ra')
-            + '&name=' + encodeURI(name)
-            + '&voiceName=' + voiceName
-            + '&voiceFormat=' + voiceFormat
-            + '&token=' + token
-            + '&concurrentRate=' + interval
-        let modal = new bootstrap.Modal(document.getElementById('legadoUrlModal'))
-        document.getElementById('legadoUrlQRCode').innerHTML = ''
-        /* 折叠二维码 */
-        let bsCollapse = new bootstrap.Collapse(document.getElementById('qrCodeCollapse'), {
-            toggle: false
-        })
-        bsCollapse.hide()
-        document.getElementById('legadoUrl').value = url;
-        modal.show();
-        localStorage.setItem("token", token)
-    }
-</script>
-</body>
-
-</html>
+<aside class="sidebar">
+<a class="brand" href="/" aria-label="Voice Lab 首页"><span class="brand-icon">◖◗</span><span>Voice Lab<small>语音工作台</small></span></a>
+<div class="nav-label">WORKSPACE</div>
+<nav aria-label="渠道导航"><a id="edgeChannel" class="nav-item active" href="#edge" aria-current="page"><span>◉</span> Edge 语音<span class="nav-dot"></span></a><a id="azureChannel" class="nav-item" href="#azure"><span>◇</span> Azure 语音<span class="nav-arrow">↗</span></a><a class="nav-item muted" href="creation.html"><span>▱</span> Creation<span class="pill">已失效</span></a></nav>
+<div class="sidebar-bottom"><div class="mini-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p>让文字，拥有声音。</p><a href="https://github.com/spinachx64/tts-server-go" target="_blank" rel="noopener noreferrer">tts-server-go <span>↗</span></a></div>
+</aside>
+<div class="workspace">
+<header class="topbar"><span class="breadcrumb">工作台 <span>/</span> <strong id="channelTitle">Edge 语音</strong></span><span class="endpoint">POST <code id="endpointPath">/api/ra</code></span></header>
+<main>
+<section class="intro"><div><div class="eyebrow"><span></span> TEXT TO SPEECH</div><h1>把想法，说出来<span>。</span></h1><p>选择一个声音，调整一点节奏，让文字成为你的下一段音频。</p></div><span class="channel-tag" id="channelTag">Microsoft Edge</span></section>
+<div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+<div class="studio-grid">
+<section class="panel editor-panel" aria-labelledby="editorTitle">
+<div class="panel-heading"><div><span class="section-number">01</span><h2 id="editorTitle">文本编辑</h2></div><button class="text-button" id="clearText" type="button">清空文本</button></div>
+<div class="editor"><label class="sr-only" for="previewText">合成文本</label><textarea id="previewText" name="previewText" spellcheck="false" placeholder="在这里写下你想听到的文字…">你好，欢迎来到语音工作台。选择喜欢的声音，让每一段文字都拥有自己的表达。</textarea><div class="editor-footer"><span>支持中文与多语言文本</span><span><strong id="charCount">0</strong> 字</span></div></div>
+<div class="sample-row"><span>试试这些</span><button type="button" data-sample="中文旁白">中文旁白</button><button type="button" data-sample="英文介绍">英文介绍</button><button type="button" data-sample="粤语问候">粤语问候</button></div>
+<div class="editor-options"><label class="check-label" id="subtitlesControl"><input id="subtitles" type="checkbox"><span>同时生成 SRT 字幕</span></label><label class="file-label" for="textFile">↑ 导入文本<input id="textFile" type="file" accept=".txt,text/plain" class="sr-only"></label></div>
+<div class="generate-row"><button id="previewButton" class="button primary" type="button"><span id="generateIcon">▶</span><span id="generateLabel">生成并试听</span><span class="shortcut">⌘ ↵</span></button><span class="generate-hint">完整合成后返回音频<br>请求最长等待 30 秒</span></div>
+</section>
+<section class="panel settings-panel" aria-labelledby="settingsTitle">
+<div class="panel-heading"><div><span class="section-number">02</span><h2 id="settingsTitle">声音设置</h2></div><button id="resetSettings" class="text-button" type="button">重置</button></div>
+<div class="settings-body"><div class="field-row"><div class="field"><label for="language">语言 / 区域</label><select id="language" name="language"><option value="zh-CN">中文 · 中国大陆</option></select></div><button id="reloadVoices" class="icon-button" title="刷新音色列表" aria-label="刷新音色列表" type="button">↻</button></div>
+<div class="field"><label for="voiceName">音色 <span id="voiceCount">预设音色</span></label><select id="voiceName" name="voiceName"><option value="zh-CN-XiaoxiaoNeural">晓晓 · 女声</option></select></div>
+<div class="voice-profile"><span class="voice-avatar" id="voiceAvatar">晓</span><div><strong id="voiceTitle">晓晓</strong><span id="voiceDetail">zh-CN-XiaoxiaoNeural</span></div><span id="voiceGender" class="voice-gender">女声</span></div>
+<div id="azureOptions" class="azure-options" hidden><div class="field"><label for="styleName">说话风格 <span id="styleHint">取决于音色</span></label><select id="styleName"><option value="general">普通</option></select></div><div class="azure-field-grid"><div class="field"><label for="styleDegree">风格强度</label><input id="styleDegree" type="number" value="1" min="0.01" max="2" step="0.01"></div><div class="field"><label for="roleName">角色</label><select id="roleName" disabled><option value="default">默认</option></select></div></div><div class="field" id="secondaryLocaleField" hidden><label for="secondaryLocale">朗读语言</label><select id="secondaryLocale"><option value="">音色默认语言</option></select></div><small>风格、角色与多语言能力以当前音色列表为准。</small></div><div class="sliders"><div class="slider-field"><label for="rate">语速 <output id="rateValue">0%</output></label><input id="rate" type="range" min="-50" max="100" value="0" step="5"><div class="range-labels"><span>舒缓</span><span>轻快</span></div></div><div class="slider-field"><label for="volume">音量 <output id="volumeValue">0%</output></label><input id="volume" type="range" min="-100" max="0" value="0" step="5"></div><div class="slider-field"><label for="pitch">音高 <output id="pitchValue">0 Hz</output></label><input id="pitch" type="range" min="-50" max="50" value="0" step="5"></div></div>
+<div class="field"><label for="voiceFormat">输出格式</label><select id="voiceFormat" name="voiceFormat"><option value="audio-24khz-48kbitrate-mono-mp3">MP3 · 24 kHz / 48 kbps</option><option value="audio-24khz-96kbitrate-mono-mp3">MP3 · 24 kHz / 96 kbps</option><option value="webm-24khz-16bit-mono-opus">WebM · 24 kHz / Opus</option></select></div>
+<details class="advanced"><summary>连接与认证 <span>＋</span></summary><div class="field"><label for="token">访问 Token</label><div class="password-field"><input id="token" name="token" type="password" autocomplete="off" placeholder="未启用认证时留空"><button id="toggleToken" type="button" aria-label="显示 Token">显示</button></div><small>填写服务启动时设置的 <code>-token</code> 值。</small></div><div class="field" id="proxyField"><label for="proxy">代理地址（可选）</label><input id="proxy" type="url" placeholder="http://127.0.0.1:7890"><small>代理地址须能被服务器访问。</small></div></details>
+</div></section>
+<section class="panel result-panel" aria-labelledby="resultTitle"><div class="panel-heading"><div><span class="section-number">03</span><h2 id="resultTitle">音频预览</h2></div><span id="resultStatus" class="status-tag">等待生成</span></div><div id="emptyResult" class="empty-result"><div class="audio-symbol" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div><strong>你的声音，即将在这里出现</strong><p>完成合成后，可试听、下载音频和字幕。</p></div></div><div id="readyResult" class="ready-result" hidden><div class="audio-meta"><span class="audio-file-icon">♫</span><div><strong id="audioFilename">audio.mp3</strong><span id="audioInfoLabel"></span></div><a id="downloadAudio" class="button secondary" download="audio.mp3">↓ 下载音频</a><a id="downloadSRT" class="button secondary" download="audio.srt" hidden>↓ 字幕</a></div><audio id="audioPlayer" controls preload="metadata"></audio></div></section>
+<section class="panel integration-panel"><div class="panel-heading"><div><span class="section-number">04</span><h2>接入与导出</h2></div><span class="small-muted">延续到你的工作流</span></div><div class="integration-content"><div><h3>在阅读 APP 中使用</h3><p>生成当前音色的朗读引擎配置，一键导入 Legado。</p></div><button id="createLegado" class="button secondary" type="button">生成导入链接 ↗</button></div><details class="request-details"><summary><span id="requestTitle">查看 JSON 请求</span><span>⌘</span></summary><pre id="requestPreview"></pre><button id="copyRequest" class="text-button" type="button">复制请求</button></details></section>
+</div><footer class="footer"><span>VOICE LAB / Powered by tts-server-go</span><span>文字有声，表达无限。</span></footer>
+</main></div>
+<dialog id="legadoDialog"><div class="dialog-heading"><div><span class="eyebrow">EXPORT TO LEGADO</span><h2>把声音带进阅读</h2></div><button id="closeDialog" class="icon-button" type="button" aria-label="关闭">×</button></div><div class="field"><label for="configName">配置名称</label><input id="configName" name="name" value="晓晓朗读"></div><div class="field"><label for="interval">请求间隔（毫秒）</label><input id="interval" type="number" min="0" max="100000" value="5000"></div><p class="dialog-note">导入配置使用所选音色与格式。阅读 APP 会根据朗读速度控制语速，音量和音高使用默认值。</p><label class="field" for="legadoUrl">导入链接<textarea id="legadoUrl" readonly rows="4"></textarea></label><p class="dialog-note">在阅读 APP → 朗读引擎 → 网络导入中粘贴链接。链接包含 Token，请仅分享给自己的设备。</p><div id="qrWrap" class="qr-wrap" hidden><div id="legadoQR"></div><p>使用阅读 APP 扫码导入</p></div><div class="dialog-actions"><button id="showQR" class="button secondary" type="button">二维码</button><button id="copyLegado" class="button secondary" type="button">复制链接</button><a id="openLegado" class="button primary">打开阅读 APP ↗</a></div></dialog>
+<script src="qrcode.min.js"></script><script src="static.js"></script><script src="studio-protocol.js"></script><script src="studio.js"></script>
+</body></html>

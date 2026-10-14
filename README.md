@@ -33,7 +33,8 @@ go build -o output/tts-server-go ./cmd/cli
 go run ./cmd/cli -port 1233 -token my-tts-secret
 ```
 
-打开 `http://localhost:1233` 选择音色、试听或生成阅读 APP 导入配置。
+打开 `http://localhost:1233`，在同一个语音工作台切换 Edge / Azure，选择音色、试听、下载音频或生成阅读 APP 导入配置。
+Azure 的风格、角色和朗读语言根据音色动态显示，Edge 支持 SRT 字幕。旧地址 `/azure.html` 会进入工作台的 Azure 渠道。
 服务监听所有网卡，其他设备使用 `http://服务器IP:1233` 访问。
 
 | 启动参数 | 默认值 | 说明 |
@@ -92,6 +93,8 @@ GitHub Actions 工作流 **Build and deploy to cook** 在 `master` 的源码等�
 go test -timeout 30s ./...
 go vet ./...
 go test -race -timeout 30s ./server ./tts/edge
+# 前端渠道切换和请求协议检查（需要 Node.js）
+node scripts/test_studio.js
 ```
 
 启动服务后，运行在线 API 检测脚本（需要 Python 3 标准库）：
