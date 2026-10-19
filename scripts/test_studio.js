@@ -51,7 +51,8 @@ for(const match of html.matchAll(/<([a-z]+)\b([^>]*\bid="([^"]+)"[^>]*)>/g)){
 }
 elements.previewText.value='测试文字';
 const calls=[];const pending=[];const windowEvents={};
-const sandbox={console,AbortController,setTimeout,clearTimeout,URL,URLSearchParams,Option:class {constructor(text,value){this.text=text;this.value=value;}},document:{getElementById:id=>{assert(elements[id],'missing '+id);return elements[id];},querySelectorAll:()=>[],addEventListener(){}},window:{addEventListener:(name,fn)=>windowEvents[name]=fn},location:{hash:'#edge',origin:'http://localhost:1233'},history:{replaceState(){}},localStorage:{getItem:()=>''},fetch:(url,options)=>{calls.push({url,options});return new Promise(resolve=>pending.push(resolve));}};
+const savedStorage=new Map([["token","remembered-user-token"]]);
+const sandbox={console,AbortController,setTimeout,clearTimeout,URL,URLSearchParams,Option:class {constructor(text,value){this.text=text;this.value=value;}},document:{getElementById:id=>{assert(elements[id],'missing '+id);return elements[id];},querySelectorAll:()=>[],addEventListener(){}},window:{addEventListener:(name,fn)=>windowEvents[name]=fn},location:{hash:'#edge',origin:'http://localhost:1233'},history:{replaceState(){}},localStorage:{getItem:key=>savedStorage.get(key)||null,setItem:(key,value)=>savedStorage.set(key,value),removeItem:key=>savedStorage.delete(key)},fetch:(url,options)=>{calls.push({url,options});return new Promise(resolve=>pending.push(resolve));}};
 sandbox.StudioProtocol=protocol;
 vm.createContext(sandbox);vm.runInContext(fs.readFileSync(path.join(__dirname,'../server/public/config.js'),'utf8'),sandbox);vm.runInContext(fs.readFileSync(path.join(__dirname,'../server/public/studio.js'),'utf8'),sandbox);
 const edgeList=[{ShortName:'zh-CN-XiaoxiaoNeural',Locale:'zh-CN',Gender:'Female'}];
@@ -59,6 +60,19 @@ const azureList=[{...edgeList[0],LocalName:'晓晓',StyleList:['cheerful'],RoleP
 const response=data=>({ok:true,json:async()=>data});
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 (async()=>{
+ assert.equal(elements.token.value,'remembered-user-token');
+ assert.equal(calls[0].options.headers.Token,'remembered-user-token');
+ elements.token.value='new-user-token';elements.token.listeners.input();
+ assert.equal(savedStorage.get('token'),'new-user-token');
+ assert(!elements.macShell.textContent.includes('new-user-token'));
+ elements.token.value='';elements.token.listeners.input();
+ assert(!savedStorage.has('token'));
+ const originalSetItem=sandbox.localStorage.setItem;
+ sandbox.localStorage.setItem=()=>{throw new Error('Storage blocked');};
+ elements.token.value='session-only-token';assert.doesNotThrow(()=>elements.token.listeners.input());
+ assert(elements.notice.textContent.includes('禁止保存'));
+ sandbox.localStorage.setItem=originalSetItem;
+ elements.token.value='';elements.token.listeners.change();
  assert.equal(calls[0].url,'/api/ra');assert.equal(JSON.parse(calls[0].options.body).list_voices,true);
  // A slow Edge response must not overwrite Azure's voice list after switching.
  sandbox.location.hash='#azure';windowEvents.hashchange();
@@ -73,5 +87,5 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
  assert(elements.macShell.textContent.includes('https://tts.cookup.cn/api/ra'));assert(!elements.windowsShell.textContent.includes('Format ='));
  assert.equal(JSON.parse(elements.requestPreview.textContent).voice,'zh-CN-XiaoxiaoNeural');
  sandbox.location.hash='#azure';windowEvents.hashchange();pending[3](response(azureList));await flush();assert.equal(elements.styleName.value,'cheerful');assert.equal(elements.roleName.value,'Narrator');
- console.log('Studio checks passed: protocol, XML escaping, Azure capabilities, channel switching, stale responses, saved settings, configured API domain.');
+ console.log('Studio checks passed: protocol, XML escaping, Azure capabilities, channel switching, stale responses, saved settings, configured API domain, Token persistence and storage denial.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

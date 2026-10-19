@@ -131,7 +131,7 @@ async function requestError(response) {
   try { message=JSON.parse(text).error || text; } catch (_) {}
   if (response.status===401) {
     byId('token').closest('details').open=true;
-    return 'Token 验证失败。请在「连接与认证」中填写服务启动时设置的 Token。';
+    return 'Token 验证失败。请在「连接与认证」中填写有效的用户 Token，管理 Token 不能用于语音合成。';
   }
   if (response.status===429 || String(message).includes('429')) return '微软服务暂时限流，请稍后重试（429）。';
   if (response.status===503 || response.status===504) return '合成超时，请缩短文本或稍后重试。';
@@ -228,7 +228,19 @@ byId('subtitles').addEventListener('change',()=>{if (byId('subtitles').checked){
 byId('resetSettings').addEventListener('click',()=>{for (const id of ['rate','volume','pitch']) byId(id).value=0;byId('voiceFormat').value='audio-24khz-48kbitrate-mono-mp3';byId('subtitles').checked=false;byId('styleName').value='general';byId('styleDegree').value='1';byId('styleDegree').disabled=true;byId('roleName').value='default';byId('secondaryLocale').value='';saveChannelSettings();updateRequest();notice('声音参数已恢复默认值。');});
 for (const button of document.querySelectorAll('[data-sample]')) button.addEventListener('click',()=>{const sample=samples[button.dataset.sample];byId('previewText').value=sample.text;if (voices.some(v=>v.Locale===sample.locale)){byId('language').value=sample.locale;refreshVoices(sample.voice);}updateRequest();});
 byId('previewButton').addEventListener('click',generate);byId('reloadVoices').addEventListener('click',loadVoices);
-byId('token').addEventListener('change',()=>{notice('Token 已更新，可点击 ↻ 刷新音色列表。');});
+function saveToken() {
+  try {
+    const token=byId('token').value;
+    if(token) localStorage.setItem('token',token);
+    else localStorage.removeItem('token');
+    return true;
+  } catch (_) {
+    notice('浏览器禁止保存 Token，本次页面仍可使用；刷新后需重新填写。','warning');
+    return false;
+  }
+}
+byId('token').addEventListener('input',saveToken);
+byId('token').addEventListener('change',()=>{if(saveToken())notice('Token 已更新，浏览器会记住；清空可移除。可点击 ↻ 刷新音色列表。');});
 byId('toggleToken').addEventListener('click',()=>{const hidden=byId('token').type==='password';byId('token').type=hidden?'text':'password';byId('toggleToken').textContent=hidden?'隐藏':'显示';byId('toggleToken').setAttribute('aria-label',hidden?'隐藏 Token':'显示 Token');});
 byId('copyMacShell').addEventListener('click',event=>copyText(byId('macShell').textContent,event.currentTarget));
 byId('copyWindowsShell').addEventListener('click',event=>copyText(byId('windowsShell').textContent,event.currentTarget));
