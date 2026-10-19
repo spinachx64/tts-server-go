@@ -5,6 +5,7 @@ const presets = [
   {ShortName:'zh-CN-XiaoyiNeural',Locale:'zh-CN',Gender:'Female'},
   {ShortName:'zh-CN-YunxiNeural',Locale:'zh-CN',Gender:'Male'},
   {ShortName:'zh-CN-YunjianNeural',Locale:'zh-CN',Gender:'Male'},
+  {ShortName:'zh-CN-YunxiaNeural',Locale:'zh-CN',Gender:'Male'},
   {ShortName:'zh-CN-YunyangNeural',Locale:'zh-CN',Gender:'Male'},
   {ShortName:'en-US-EmmaMultilingualNeural',Locale:'en-US',Gender:'Female'},
   {ShortName:'en-US-JennyNeural',Locale:'en-US',Gender:'Female'},
