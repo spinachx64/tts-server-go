@@ -7,7 +7,7 @@ Web 主页仍只填写访问 Token。网页不提供创建或管理功能；外�
 完整建表 SQL：[schema.sql](../internal/tokenstore/schema.sql)。分发程序先创建数据库及表：
 
 ```sh
-sqlite3 /var/lib/tts-server-go/tokens.db < internal/tokenstore/schema.sql
+sqlite3 /opt/tts-server-go/data/tokens.db < internal/tokenstore/schema.sql
 ```
 
 | 字段 | 含义 |
@@ -24,7 +24,7 @@ sqlite3 /var/lib/tts-server-go/tokens.db < internal/tokenstore/schema.sql
 import hashlib, secrets, sqlite3
 
 token = secrets.token_urlsafe(32)
-with sqlite3.connect('/var/lib/tts-server-go/tokens.db') as db:
+with sqlite3.connect('/opt/tts-server-go/data/tokens.db') as db:
     db.execute('INSERT INTO tokens(token_hash,user_id) VALUES (?,?)',
                (hashlib.sha256(token.encode()).hexdigest(), 'user-001'))
 # 通过你的分发渠道将 token 原文交给用户，避免记录到日志。
@@ -35,19 +35,19 @@ with sqlite3.connect('/var/lib/tts-server-go/tokens.db') as db:
 ## 启动
 
 ```sh
-./output/tts-server-go -port 1233 -token-db /var/lib/tts-server-go/tokens.db
+./output/tts-server-go -port 1233 -token-db /opt/tts-server-go/data/tokens.db
 ```
 
 SQLite 模式支持当前服务器 Linux amd64 及驱动支持的常见桌面/服务器平台；Android 和 Linux MIPS 构建保留原单 Token 模式，指定 `-token-db` 会启动失败。
 
 `-token-db` 和旧的 `-token` 互斥，避免旧共享 Token 绕过验证。两者都不设置则保持旧行为：不验证。
 
-服务器使用 systemd 时，在 `/etc/tts-server-go.env` 设置：
+服务器使用 systemd 时，在 `/opt/project-config/tts-server-go/service.env` 设置：
 
 ```ini
 TTS_PORT=1233
 TTS_TOKEN=
-TTS_TOKEN_DB=/var/lib/tts-server-go/tokens.db
+TTS_TOKEN_DB=/opt/tts-server-go/data/tokens.db
 ```
 
 使用更新后的 `deploy/tts-server-go.service`，执行 `systemctl daemon-reload` 后重启服务。数据库不放在 releases/current 下，部署不会覆盖。分发程序拥有写权限，运行用户 `tts` 需要数据库和父目录的读/遍历权限；WAL 模式下还需能读取 `-wal`、`-shm` 文件（由分发程序保持存在，使用兼容的权限）。不要将数据库放入网页静态目录或提交到仓库。
@@ -58,7 +58,7 @@ TTS_TOKEN_DB=/var/lib/tts-server-go/tokens.db
 
 设置至少 32 字节的随机 `TTS_ADMIN_TOKEN` 环境变量（也支持 `-admin-token`）并启用 `-token-db` 后，提供以下管理接口。未配置时接口返回 404。管理 Token 不写入用户表，不可用于语音合成；普通用户 Token 也不能管理其它 Token。网页没有管理功能。
 
-生产环境在 `/etc/tts-server-go.env` 配置 `TTS_ADMIN_TOKEN`，不要把真实值写进源码、网页配置或调用示例。修改后重启服务。
+生产环境在 `/opt/project-config/tts-server-go/service.env` 配置 `TTS_ADMIN_TOKEN`，不要把真实值写进源码、网页配置或调用示例。修改后重启服务。
 
 所有管理请求使用：
 
@@ -95,7 +95,7 @@ curl --fail-with-body -X DELETE https://tts.cookup.cn/api/tokens \
 
 错误：400 参数无效、401 管理认证失败、404 未启用或用户 Token 不存在、405 方法不支持、415 Content-Type 不正确、503 数据库暂不可用。所有响应设置 `Cache-Control: no-store`。管理请求日志的用户名为 `admin`（认证失败为 `unknown`），不记录认证请求头和返回的新 Token。
 
-启用管理接口后，服务需要 Token 数据库及其父目录的写权限，以创建 SQLite 事务日志；systemd 配置使用 `ReadWritePaths=/var/lib/tts-server-go`。认证查询仍使用独立只读连接。只使用外部分发程序时可以不配置管理 Token，继续只读验证。
+启用管理接口后，服务需要 Token 数据库及其父目录的写权限，以创建 SQLite 事务日志；systemd 配置使用 `ReadWritePaths=/opt/tts-server-go/data`。认证查询仍使用独立只读连接。只使用外部分发程序时可以不配置管理 Token，继续只读验证。
 
 当前服务器的管理凭据存于 `/opt/project-config/tts-server-go/admin-token`，可通过以下命令查看：
 
@@ -103,4 +103,4 @@ curl --fail-with-body -X DELETE https://tts.cookup.cn/api/tokens \
 ssh cook 'sudo cat /opt/project-config/tts-server-go/admin-token'
 ```
 
-统一配置目录按 `/opt/project-config/<项目名>/` 分隔，目录权限 `0700`、凭据文件 `0600`，由 root 管理。运行环境中的 `TTS_ADMIN_TOKEN` 仍配置在 `/etc/tts-server-go.env`；轮换时需要同步更新并重启服务。不要将服务器凭据目录提交到 GitHub。
+统一配置目录按 `/opt/project-config/<项目名>/` 分隔，目录权限 `0700`、凭据文件 `0600`，由 root 管理。运行环境中的 `TTS_ADMIN_TOKEN` 仍配置在 `/opt/project-config/tts-server-go/service.env`；轮换时需要同步更新并重启服务。不要将服务器凭据目录提交到 GitHub。

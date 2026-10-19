@@ -3,7 +3,7 @@
 API 请求按 JSON Lines 写入文件，每次调用一行。网页和静态文件访问不记录。
 
 - 本机默认 `logs/api-YYYY-MM-DD.jsonl`，使用 `-log-dir` 或环境变量 `TTS_LOG_DIR` 修改目录（启动参数优先）。
-- 部署的 systemd 服务使用 `/var/log/tts-server-go/api-YYYY-MM-DD.jsonl`，按北京时间切日，日志时间包含 `+08:00`。
+- 部署的 systemd 服务使用 `/opt/tts-server-go/logs/api-YYYY-MM-DD.jsonl`，按北京时间切日，日志时间包含 `+08:00`。
 - 按请求开始日期归档，跨零点完成的请求仍写入开始当天的文件。
 - 目录由 systemd 创建并授权给运行用户 `tts`；文件权限 `0600`，部署更新不会覆盖。
 - 每次追加后关闭文件，可直接移动或删除旧日志回收；服务不会自动删除历史文件。若删除当天日志，下一次请求会重新创建。
@@ -26,7 +26,7 @@ API 请求按 JSON Lines 写入文件，每次调用一行。网页和静态文�
 查看日志：
 
 ```sh
-ssh cook 'sudo tail -n 20 /var/log/tts-server-go/api-$(date +%F).jsonl'
+ssh cook 'sudo tail -n 20 /opt/tts-server-go/logs/api-$(date +%F).jsonl'
 ```
 
 日志目录不可写时服务启动失败；运行时写日志失败会写入 systemd journal，不影响 API 响应。

@@ -8,12 +8,10 @@ Type=simple
 User=tts
 Group=tts
 WorkingDirectory=/opt/tts-server-go/current
-EnvironmentFile=/etc/tts-server-go.env
+EnvironmentFile=/opt/project-config/tts-server-go/service.env
 ExecStart=/opt/tts-server-go/current/tts-server-go -port ${TTS_PORT} -token=${TTS_TOKEN} -token-db=${TTS_TOKEN_DB}
-LogsDirectory=tts-server-go
-LogsDirectoryMode=0750
 Environment=TZ=Asia/Shanghai
-Environment=TTS_LOG_DIR=/var/log/tts-server-go
+Environment=TTS_LOG_DIR=/opt/tts-server-go/logs
 Restart=on-failure
 RestartSec=3
 KillSignal=SIGINT
@@ -23,7 +21,7 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 # Token management APIs require write access to the database directory.
-ReadWritePaths=-/var/lib/tts-server-go
+ReadWritePaths=/opt/tts-server-go/data /opt/tts-server-go/logs
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 
 [Install]

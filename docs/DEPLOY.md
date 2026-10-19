@@ -34,7 +34,7 @@ sudo bash deploy/install-server.sh
 ```
 
 如果不安装 Git，也可在本机上传 `deploy/` 目录后执行其中的脚本。
-脚本可重复执行，已有 `/etc/tts-server-go.env` 不会被覆盖。
+脚本可重复执行，已有 `/opt/project-config/tts-server-go/service.env` 不会被覆盖。
 它会准备：
 
 | 项目 | 位置 / 用途 |
@@ -44,7 +44,7 @@ sudo bash deploy/install-server.sh
 | `/opt/tts-server-go/incoming` | 部署压缩包暂存 |
 | `/opt/tts-server-go/releases` | 每次构建的版本目录 |
 | `/opt/tts-server-go/current` | 当前版本软链接，首次部署时创建 |
-| `/etc/tts-server-go.env` | 端口和 API Token，仅 root 可读 |
+| `/opt/project-config/tts-server-go/service.env` | 端口和 API Token，仅 root 可读 |
 | `/etc/systemd/system/tts-server-go.service` | systemd 服务 |
 | `/usr/local/libexec/tts-server-go-deploy` | 校验、切换版本及健康检查脚本 |
 | `/etc/sudoers.d/tts-server-go-deploy` | 仅允许重启和检查该服务的状态，无需密码 |
@@ -56,7 +56,7 @@ sudo bash deploy/install-server.sh
 初始化脚本会生成随机 Token，默认端口为 1233。用 root 查看或修改：
 
 ```sh
-sudoedit /etc/tts-server-go.env
+sudoedit /opt/project-config/tts-server-go/service.env
 ```
 
 格式示例：
@@ -148,7 +148,7 @@ ssh-keygen -lf cook-known-hosts
 | `COOK_API_PORT` | `1233` | 与服务器 `TTS_PORT` 一致，用于健康检查 |
 
 这些值不会从你本机的 `~/.ssh/config` 或 SSH Agent 自动读取。
-API Token 只放在服务器 `/etc/tts-server-go.env`，不需要上传到 GitHub。
+API Token 只放在服务器 `/opt/project-config/tts-server-go/service.env`，不需要上传到 GitHub。
 
 使用 GitHub CLI 配置的例子：
 
@@ -199,3 +199,17 @@ Creation 当前上游认证失败，因此全渠道脚本可能返回 1；请查
 ## CI 触发范围
 
 日常 push 只由 `deploy-cook.yml` 执行测试、前端检查、Linux amd64 构建与部署。原项目的多平台构建 `test.yml` 和发布 `main.yml` 改为 `workflow_dispatch` 手动触发，不再随 push 或 CHANGELOG 变更自动启动。手动多平台任务去掉不受支持的 Windows ARM32 组合，保留 Windows ARM64；单个组合失败不会取消其它组合。
+
+## /opt 目录布局
+
+| 路径 | 用途 | 权限 |
+|---|---|---|
+| `/opt/tts-server-go/current`、`releases`、`incoming` | 程序及发布文件 | 部署用户管理 |
+| `/opt/tts-server-go/data/tokens.db` | 用户 Token 数据库 | tts 专用 |
+| `/opt/tts-server-go/logs/api-YYYY-MM-DD.jsonl` | 每日 API 日志 | tts 专用 |
+| `/opt/project-config/tts-server-go/service.env` | 端口、数据库路径及服务密钥 | root 专用 |
+| `/opt/project-config/tts-server-go/admin-token` | 管理 Token | root 专用 |
+| `/opt/project-config/tts-server-go/user-tokens.txt` | 初始用户 Token 原文 | root 专用 |
+| `/opt/project-config/tts-server-go/backups` | 历史配置备份 | root 专用 |
+
+首次安装创建数据、日志和配置目录。已有旧 `/etc/tts-server-go.env` 的服务器，应先停止服务，将配置、数据库及日志移动到上表路径，并更新 `TTS_TOKEN_DB`，安装新版 unit 后 `systemctl daemon-reload` 并启动服务；安装脚本会拒绝直接覆盖旧布局。部署发布只切换二进制，不移动或覆盖上述持久化目录。systemd unit、sudoers、Nginx 系统日志等系统管理文件仍按系统标准路径存放。
