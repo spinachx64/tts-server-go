@@ -28,6 +28,7 @@ type GracefulServer struct {
 		Valid(context.Context, string) (bool, error)
 	}
 	UseDnsEdge bool
+	APILogger  *APILogger
 
 	Server       *http.Server
 	serveMux     *http.ServeMux
@@ -75,7 +76,7 @@ func (s *GracefulServer) ListenAndServe(port int64) error {
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   60 * time.Second,
 		MaxHeaderBytes: 1 << 20,
-		Handler:        s.serveMux,
+		Handler:        s.logAPI(s.serveMux),
 	}
 
 	log.Infof("服务已启动, 监听地址为: %s:%d", tts_server_go.GetOutboundIPString(), port)

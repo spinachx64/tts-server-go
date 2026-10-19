@@ -13,9 +13,17 @@ import (
 
 var port = flag.Int64("port", 1233, "自定义监听端口")
 var token = flag.String("token", "", "自定义访问令牌；客户端通过Token请求头发送，默认不验证")
+var logDir = flag.String("log-dir", defaultLogDir(), "API每日JSONL日志目录")
 var tokenDB = flag.String("token-db", "", "外部分发程序维护的SQLite Token数据库；只读验证")
 
 var useDnsEdge = flag.Bool("use-dns-edge", false, "兼容旧参数；Edge新接口始终使用DNS解析。")
+
+func defaultLogDir() string {
+	if dir := os.Getenv("TTS_LOG_DIR"); dir != "" {
+		return dir
+	}
+	return "logs"
+}
 
 func main() {
 	log.SetFormatter(&logformat.Formatter{HideKeys: true,
@@ -42,6 +50,11 @@ func main() {
 		srv.TokenValidator = store
 		log.Info("已启用SQLite Token验证")
 	}
+	logger, err := server.NewAPILogger(*logDir)
+	if err != nil {
+		log.Fatalf("API日志初始化失败: %v", err)
+	}
+	srv.APILogger = logger
 	srv.HandleFunc()
 
 	go func() {

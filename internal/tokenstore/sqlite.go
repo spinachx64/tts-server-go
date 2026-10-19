@@ -28,7 +28,7 @@ func Open(path string) (*Store, error) {
 	}
 	db.SetMaxOpenConns(4)
 	// Verify schema at startup; never silently disable authentication.
-	rows, err := db.Query(`SELECT token_hash, enabled, expires_at FROM tokens LIMIT 0`)
+	rows, err := db.Query(`SELECT token_hash, user_id, enabled, expires_at FROM tokens LIMIT 0`)
 	if err != nil {
 		db.Close()
 		return nil, fmt.Errorf("open token database: %w", err)
@@ -50,4 +50,18 @@ func (s *Store) Valid(ctx context.Context, token string) (bool, error) {
  AND (expires_at IS NULL OR expires_at > unixepoch())
  )`, hex.EncodeToString(hash[:])).Scan(&valid)
 	return valid, err
+}
+
+// UserID identifies known tokens, including expired or disabled tokens, for audit logs.
+func (s *Store) UserID(ctx context.Context, token string) (string, error) {
+	if token == "" {
+		return "", nil
+	}
+	hash := sha256.Sum256([]byte(token))
+	var user string
+	err := s.db.QueryRowContext(ctx, `SELECT user_id FROM tokens WHERE token_hash = ?`, hex.EncodeToString(hash[:])).Scan(&user)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return user, err
 }

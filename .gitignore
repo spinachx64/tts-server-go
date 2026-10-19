@@ -12,3 +12,7 @@
 *.db
 *.db-wal
 *.db-shm
+
+# API request logs
+/logs/
+*.jsonl

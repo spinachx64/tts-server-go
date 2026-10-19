@@ -10,6 +10,10 @@ Group=tts
 WorkingDirectory=/opt/tts-server-go/current
 EnvironmentFile=/etc/tts-server-go.env
 ExecStart=/opt/tts-server-go/current/tts-server-go -port ${TTS_PORT} -token=${TTS_TOKEN} -token-db=${TTS_TOKEN_DB}
+LogsDirectory=tts-server-go
+LogsDirectoryMode=0750
+Environment=TZ=Asia/Shanghai
+Environment=TTS_LOG_DIR=/var/log/tts-server-go
 Restart=on-failure
 RestartSec=3
 KillSignal=SIGINT

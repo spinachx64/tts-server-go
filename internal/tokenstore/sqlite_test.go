@@ -43,6 +43,12 @@ func TestExternalIssuerUpdates(t *testing.T) {
 		t.Fatal(err)
 	}
 	check("issued", true)
+	if user, err := store.UserID(context.Background(), "issued"); err != nil || user != "alice" {
+		t.Fatalf("user=%q err=%v", user, err)
+	}
+	if user, err := store.UserID(context.Background(), "unknown"); err != nil || user != "" {
+		t.Fatalf("unknown user=%q err=%v", user, err)
+	}
 	check("wrong", false)
 	for _, tc := range []struct {
 		query string
