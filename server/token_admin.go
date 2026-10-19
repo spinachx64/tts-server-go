@@ -32,7 +32,7 @@ func (s *GracefulServer) tokenAdminHandler(w http.ResponseWriter, r *http.Reques
 	}
 	switch r.Method {
 	case http.MethodPost:
-		contentType, parseErr := mime.ParseMediaType(r.Header.Get("Content-Type"))
+		contentType, _, parseErr := mime.ParseMediaType(r.Header.Get("Content-Type"))
 		if parseErr != nil || contentType != "application/json" {
 			jsonError(w, 415, "Content-Type 必须是 application/json")
 			return
