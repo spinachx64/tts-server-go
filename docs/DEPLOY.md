@@ -195,3 +195,7 @@ python3 scripts/test_apis.py --url http://服务器IP:1233 --token 你的API令�
 ```
 
 Creation 当前上游认证失败，因此全渠道脚本可能返回 1；请查看 Edge 和 Azure 的各项结果。
+
+## CI 触发范围
+
+日常 push 只由 `deploy-cook.yml` 执行测试、前端检查、Linux amd64 构建与部署。原项目的多平台构建 `test.yml` 和发布 `main.yml` 改为 `workflow_dispatch` 手动触发，不再随 push 或 CHANGELOG 变更自动启动。手动多平台任务去掉不受支持的 Windows ARM32 组合，保留 Windows ARM64；单个组合失败不会取消其它组合。

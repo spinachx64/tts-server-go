@@ -5,11 +5,13 @@ on:
     branches: [master]
     paths:
       - '**/*.go'
+      - '**/*.sql'
       - 'go.mod'
       - 'go.sum'
       - 'server/public/**'
       - 'deploy/**'
       - 'scripts/test_deploy.sh'
+      - 'scripts/test_studio.js'
       - '.github/workflows/deploy-cook.yml'
   pull_request:
     branches: [master]
@@ -38,7 +40,8 @@ jobs:
         run: |
           go test -timeout 60s ./...
           go vet ./...
-          go test -race -timeout 60s ./server ./tts/edge
+          go test -race -timeout 60s ./server ./tts/edge ./internal/tokenstore
+          node scripts/test_studio.js
           bash scripts/test_deploy.sh
       - name: Build Linux amd64 binary
         env:

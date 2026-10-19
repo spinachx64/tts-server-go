@@ -1,11 +1,7 @@
-name: CI
+name: Manual multi-platform release
 
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - 'CHANGELOG.md'
+  workflow_dispatch:
 
 env:
   BINARY_PREFIX: "tts-server-go_"
@@ -32,9 +28,9 @@ jobs:
          - goos: darwin
            goarch: "386"
          - goos: windows
-           goarch: arm64
+           goarch: arm
 
-      fail-fast: true
+      fail-fast: false
     steps:
       - uses: actions/checkout@v7
       - name: Setup Go environment

@@ -1,13 +1,7 @@
-name: Test
+name: Manual multi-platform build
 
 on:
-  push:
-    branches:
-      - master
-    paths-ignore:
-    - "README.md"
-    - "CHANGELOG.md"
-  workflow_dispatch: 
+  workflow_dispatch:
 
 env:
   BINARY_PREFIX: "tts-server-go_"
@@ -34,9 +28,9 @@ jobs:
          - goos: darwin
            goarch: "386"
          - goos: windows
-           goarch: arm64
+           goarch: arm
 
-      fail-fast: true
+      fail-fast: false
     steps:
       - uses: actions/checkout@v7
       - name: Setup Go environment

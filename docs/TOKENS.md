@@ -96,3 +96,11 @@ curl --fail-with-body -X DELETE https://tts.cookup.cn/api/tokens \
 错误：400 参数无效、401 管理认证失败、404 未启用或用户 Token 不存在、405 方法不支持、415 Content-Type 不正确、503 数据库暂不可用。所有响应设置 `Cache-Control: no-store`。管理请求日志的用户名为 `admin`（认证失败为 `unknown`），不记录认证请求头和返回的新 Token。
 
 启用管理接口后，服务需要 Token 数据库及其父目录的写权限，以创建 SQLite 事务日志；systemd 配置使用 `ReadWritePaths=/var/lib/tts-server-go`。认证查询仍使用独立只读连接。只使用外部分发程序时可以不配置管理 Token，继续只读验证。
+
+当前服务器的管理凭据存于 `/etc/project-config/tts-server-go/admin-token`，可通过以下命令查看：
+
+```sh
+ssh cook 'sudo cat /etc/project-config/tts-server-go/admin-token'
+```
+
+统一配置目录按 `/etc/project-config/<项目名>/` 分隔，目录权限 `0700`、凭据文件 `0600`，由 root 管理。运行环境中的 `TTS_ADMIN_TOKEN` 仍配置在 `/etc/tts-server-go.env`；轮换时需要同步更新并重启服务。不要将服务器凭据目录提交到 GitHub。
