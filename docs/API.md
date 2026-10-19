@@ -30,6 +30,8 @@
 
 ### Token 验证
 
+支持由外部程序维护的 [SQLite 多用户 Token 表](TOKENS.md)。启用 `-token-db` 后，合成接口检查 Token 的 SHA-256、启用状态和有效期，数据库异常返回 503；不再使用共享 `-token`。主页不提供 Token 管理功能。
+
 Token 是你自己设置的服务访问密码，没有固定值，不需要向微软申请。
 例如启动命令中的值为 `my-tts-secret`：
 

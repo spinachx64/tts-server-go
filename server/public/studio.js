@@ -118,7 +118,6 @@ function updateVoice() {
   byId('voiceAvatar').textContent=[...name][0]||'声';
   byId('voiceDetail').textContent=voice.ShortName;
   byId('voiceGender').textContent=voice.Gender==='Male'?'男声':'女声';
-  byId('configName').value=name+' · '+(channel==='azure'?'Azure':'Edge')+'朗读';
   updateAzureOptions();updateRequest();
 }
 function headers() {
@@ -169,6 +168,11 @@ function updateRequest() {
   byId('charCount').textContent=[...byId('previewText').value].length.toLocaleString();
   for (const name of ['rate','volume','pitch']) byId(name+'Value').textContent=(Number(byId(name).value)>0?'+':'')+byId(name).value+(name==='pitch'?' Hz':'%');
   byId('requestPreview').textContent=channel==='azure'?StudioProtocol.azureSSML(payload()):JSON.stringify(payload(),null,2);
+  const examples=StudioProtocol.shellExamples(channel,payload(),window.VOICE_LAB_CONFIG.apiBaseURL.replace(/\/+$/,''));
+  byId('shellChannel').textContent=channel==='azure'?'Azure':'Edge';
+  byId('macShell').textContent=examples.mac;
+  byId('windowsShell').textContent=examples.windows;
+  byId('shellOutput').textContent=examples.output==='result.json'?'输出 result.json：audio 为 Base64 音频，subtitles 为 SRT 文本；只需音频时取消「同时生成 SRT 字幕」。':'输出文件：'+examples.output+'（保存在终端当前目录）。';
 }
 function sizeLabel(bytes) {return bytes<1024?bytes+' B':bytes<1048576?(bytes/1024).toFixed(1)+' KB':(bytes/1048576).toFixed(2)+' MB';}
 async function generate() {
@@ -206,20 +210,6 @@ async function generate() {
   } catch (error) {byId('resultStatus').textContent='生成失败';notice(error.name==='AbortError'?'请求超时，请检查服务连接或缩短文本。':error.message,'error');}
   finally {clearTimeout(timer);busy=false;byId('edgeChannel').removeAttribute('aria-disabled');byId('azureChannel').removeAttribute('aria-disabled');byId('previewButton').disabled=false;byId('generateLabel').textContent='生成并试听';byId('generateIcon').textContent='▶';byId('emptyResult').classList.remove('busy');}
 }
-function updateLegadoLink() {
-  const base=location.origin;
-  const params=new URLSearchParams({api:base+(channel==='azure'?'/api/azure':'/api/ra'),name:byId('configName').value,voiceName:byId('voiceName').value,voiceFormat:byId('voiceFormat').value,token:byId('token').value,concurrentRate:byId('interval').value||'5000'});
-  if(channel==='azure'){params.set('styleName',byId('styleName').value||'general');params.set('styleDegree',byId('styleDegree').value);params.set('roleName',byId('roleName').value||'default');if(byId('secondaryLocale').value)params.set('secondaryLocale',byId('secondaryLocale').value);}
-  const url=base+'/api/legado?'+params;
-  byId('legadoUrl').value=url;byId('openLegado').href='legado://import/httpTTS?src='+encodeURIComponent(url);
-  if (!byId('qrWrap').hidden) renderQR();
-}
-function renderQR() {
-  byId('legadoQR').replaceChildren();
-  try {new QRCode(byId('legadoQR'),{text:byId('legadoUrl').value,width:220,height:220,colorDark:'#24352d',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}
-  catch (_) {byId('legadoQR').textContent='链接过长，请复制链接导入。';}
-}
-byId('showQR').addEventListener('click',()=>{const show=byId('qrWrap').hidden;byId('qrWrap').hidden=!show;byId('showQR').textContent=show?'收起二维码':'二维码';if(show)renderQR();});
 async function copyText(text,button) {
   const original=button.textContent;
   try {
@@ -240,12 +230,11 @@ for (const button of document.querySelectorAll('[data-sample]')) button.addEvent
 byId('previewButton').addEventListener('click',generate);byId('reloadVoices').addEventListener('click',loadVoices);
 byId('token').addEventListener('change',()=>{notice('Token 已更新，可点击 ↻ 刷新音色列表。');});
 byId('toggleToken').addEventListener('click',()=>{const hidden=byId('token').type==='password';byId('token').type=hidden?'text':'password';byId('toggleToken').textContent=hidden?'隐藏':'显示';byId('toggleToken').setAttribute('aria-label',hidden?'隐藏 Token':'显示 Token');});
+byId('copyMacShell').addEventListener('click',event=>copyText(byId('macShell').textContent,event.currentTarget));
+byId('copyWindowsShell').addEventListener('click',event=>copyText(byId('windowsShell').textContent,event.currentTarget));
 byId('copyRequest').addEventListener('click',event=>copyText(byId('requestPreview').textContent,event.currentTarget));
-byId('createLegado').addEventListener('click',()=>{byId('qrWrap').hidden=true;byId('showQR').textContent='二维码';updateLegadoLink();byId('legadoDialog').showModal();});byId('closeDialog').addEventListener('click',()=>byId('legadoDialog').close());
-byId('configName').addEventListener('input',updateLegadoLink);byId('interval').addEventListener('input',updateLegadoLink);byId('copyLegado').addEventListener('click',event=>copyText(byId('legadoUrl').value,event.currentTarget));
-byId('legadoDialog').addEventListener('click',event=>{if (event.target===byId('legadoDialog')){const rect=event.target.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)event.target.close();}});
 byId('textFile').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;try{if(file.size>2*1024*1024)throw new Error('文本文件不能超过 2 MiB。');byId('previewText').value=await file.text();updateRequest();notice('已导入 '+file.name+'。');}catch(error){notice(error.message,'error');}finally{event.target.value='';}});
-document.addEventListener('keydown',event=>{if((event.metaKey||event.ctrlKey)&&event.key==='Enter'&&!byId('legadoDialog').open){event.preventDefault();generate();}});
+document.addEventListener('keydown',event=>{if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){event.preventDefault();generate();}});
 byId('audioPlayer').addEventListener('error',()=>notice('浏览器无法播放此格式，可下载音频或切换到 MP3 重试。','warning'));
 window.addEventListener('pagehide',()=>{if(audioURL)URL.revokeObjectURL(audioURL);if(subtitleURL)URL.revokeObjectURL(subtitleURL);});
 try{byId('token').value=localStorage.getItem('token')||'';}catch(_){}

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	logformat "github.com/antonfisher/nested-logrus-formatter"
+	"github.com/jing332/tts-server-go/internal/tokenstore"
 	"github.com/jing332/tts-server-go/server"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -12,6 +13,8 @@ import (
 
 var port = flag.Int64("port", 1233, "自定义监听端口")
 var token = flag.String("token", "", "自定义访问令牌；客户端通过Token请求头发送，默认不验证")
+var tokenDB = flag.String("token-db", "", "外部分发程序维护的SQLite Token数据库；只读验证")
+
 var useDnsEdge = flag.Bool("use-dns-edge", false, "兼容旧参数；Edge新接口始终使用DNS解析。")
 
 func main() {
@@ -27,6 +30,18 @@ func main() {
 	}
 
 	srv := &server.GracefulServer{Token: *token, UseDnsEdge: *useDnsEdge}
+	if *tokenDB != "" {
+		if *token != "" {
+			log.Fatal("-token-db 与 -token 不能同时设置")
+		}
+		store, err := tokenstore.Open(*tokenDB)
+		if err != nil {
+			log.Fatalf("Token数据库初始化失败: %v", err)
+		}
+		defer store.Close()
+		srv.TokenValidator = store
+		log.Info("已启用SQLite Token验证")
+	}
 	srv.HandleFunc()
 
 	go func() {

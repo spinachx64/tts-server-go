@@ -1,6 +1,6 @@
 # tts-server-go
 
-基于 Go 的 HTTP 文本转语音服务，调用微软在线语音接口，提供网页试听、音色选择和阅读（Legado）APP 配置导入。
+基于 Go 的 HTTP 文本转语音服务，调用微软在线语音接口，提供网页试听、音色选择和 macOS / Windows 的 API 调用示例。
 Edge 渠道使用纯 Go 实现，支持语速、音量、音高、代理、长文本分段及 SRT 字幕，无需安装 Python 或 edge-tts。
 
 完整的请求参数、响应格式和调用示例见 **[API 接口文档](docs/API.md)**。
@@ -33,15 +33,18 @@ go build -o output/tts-server-go ./cmd/cli
 go run ./cmd/cli -port 1233 -token my-tts-secret
 ```
 
-打开 `http://localhost:1233`，在同一个语音工作台切换 Edge / Azure，选择音色、试听、下载音频或生成阅读 APP 导入配置。
-Azure 的风格、角色和朗读语言根据音色动态显示，Edge 支持 SRT 字幕。旧地址 `/azure.html` 会进入工作台的 Azure 渠道。
+打开 `http://localhost:1233`，在同一个语音工作台切换 Edge / Azure，选择音色、试听、下载音频或复制 API 调用命令。
+Azure 的风格、角色和朗读语言根据音色动态显示，Edge 支持 SRT 字幕。
 服务监听所有网卡，其他设备使用 `http://服务器IP:1233` 访问。
 
 | 启动参数 | 默认值 | 说明 |
 |---|---|---|
 | `-port` | `1233` | HTTP 服务端口 |
 | `-token` | 空 | 自定义访问令牌；空值表示不验证 |
+| `-token-db` | 空 | 外部程序维护的 SQLite Token 表，只读验证；与 `-token` 互斥，见 [多用户 Token](docs/TOKENS.md) |
 | `-use-dns-edge` | `false` | 保留兼容旧命令；Edge 始终使用 DNS，取值不影响连接 |
+
+多用户分发可使用 [SQLite Token 验证](docs/TOKENS.md)，Web 不提供创建或管理功能。
 
 Token 是你自己设置的服务访问密码，没有固定值，也不需要向微软申请。
 例如使用 `-token my-tts-secret` 启动，客户端就发送请求头 `Token: my-tts-secret`。
@@ -125,3 +128,5 @@ TTS_INTEGRATION_TEST=1 go test -timeout 60s ./tts/edge ./tts/azure ./tts/creatio
 - Edge 协议参考：[rany2/edge-tts](https://github.com/rany2/edge-tts)
 
 原项目标注为 MIT 许可证。
+
+网页调用示例的域名配置在 `server/public/config.js` 的 `apiBaseURL`，当前为 `https://tts.cookup.cn`。此文件公开提供给浏览器，请勿写入 Token 或密钥。修改后重新构建部署生效；网页试听请求仍发送到当前站点。

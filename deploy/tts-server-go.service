@@ -9,7 +9,7 @@ User=tts
 Group=tts
 WorkingDirectory=/opt/tts-server-go/current
 EnvironmentFile=/etc/tts-server-go.env
-ExecStart=/opt/tts-server-go/current/tts-server-go -port ${TTS_PORT} -token ${TTS_TOKEN}
+ExecStart=/opt/tts-server-go/current/tts-server-go -port ${TTS_PORT} -token=${TTS_TOKEN} -token-db=${TTS_TOKEN_DB}
 Restart=on-failure
 RestartSec=3
 KillSignal=SIGINT
@@ -18,6 +18,8 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
+# External issuer owns this directory; service only needs read access.
+ReadOnlyPaths=-/var/lib/tts-server-go
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 
 [Install]

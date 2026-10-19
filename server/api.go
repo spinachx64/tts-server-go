@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"crypto/subtle"
 	"embed"
 	_ "embed"
 	"encoding/json"
@@ -22,7 +23,10 @@ import (
 )
 
 type GracefulServer struct {
-	Token      string
+	Token          string
+	TokenValidator interface {
+		Valid(context.Context, string) (bool, error)
+	}
 	UseDnsEdge bool
 
 	Server       *http.Server
@@ -115,14 +119,21 @@ func (s *GracefulServer) Shutdown(timeout time.Duration) error {
 
 // 验证Token true表示成功或未设置Token
 func (s *GracefulServer) verifyToken(w http.ResponseWriter, r *http.Request) bool {
-	if s.Token != "" {
-		token := r.Header.Get("Token")
-		if s.Token != token {
-			log.Warnf("无效的Token, 远程地址: %s", r.RemoteAddr)
-			w.WriteHeader(http.StatusUnauthorized)
-			_, _ = w.Write([]byte("无效的Token"))
-			return false
-		}
+	valid := true
+	var err error
+	if s.TokenValidator != nil {
+		valid, err = s.TokenValidator.Valid(r.Context(), r.Header.Get("Token"))
+	} else if s.Token != "" {
+		valid = subtle.ConstantTimeCompare([]byte(s.Token), []byte(r.Header.Get("Token"))) == 1
+	}
+	if err != nil {
+		log.WithError(err).Error("Token数据库查询失败")
+		jsonError(w, http.StatusServiceUnavailable, "Token验证暂不可用")
+		return false
+	}
+	if !valid {
+		jsonError(w, http.StatusUnauthorized, "无效的Token")
+		return false
 	}
 	return true
 }

@@ -22,5 +22,23 @@
     if(format.startsWith('raw'))return format.endsWith('pcm')?'audio.pcm':'audio.raw';
     return 'audio.mp3';
   }
-  root.StudioProtocol={escapeXML,azureSSML,buildRequest,filename};
+  function shellExamples(channel,p,origin) {
+    const request=buildRequest(channel,p,'');
+    const posix=value=>"'"+String(value).replace(/'/g,"'\"'\"'")+"'";
+    const powershell=value=>"'"+String(value).replace(/'/g,"''")+"'";
+    const input=channel==='azure'?'request.ssml':'request.json';
+    const output=channel==='edge'&&p.response_format!=='audio'?'result.json':filename(p.format);
+    const url=origin+request.url;
+    const mac=["TOKEN='YOUR_TOKEN'",'printf %s '+posix(request.body)+' > '+input,
+      'curl --fail-with-body --silent --show-error '+posix(url)+' -H "Token: $TOKEN"'+
+      Object.entries(request.headers).map(([key,value])=>' -H '+posix(key+': '+value)).join('')+
+      ' --data-binary @'+input+' --output '+output].join('\n');
+    const winHeaders=["Token = $token",...Object.entries(request.headers).filter(([key])=>key!=='Content-Type').map(([key,value])=>key+' = '+powershell(value))].join('; ');
+    const windows=["$token = 'YOUR_TOKEN'",'$body = '+powershell(request.body),
+      'Invoke-WebRequest -UseBasicParsing -Method Post -Uri '+powershell(url)+
+      ' -Headers @{ '+winHeaders+' } -ContentType '+powershell(request.headers['Content-Type'])+
+      ' -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) -OutFile '+powershell(output)].join('\n');
+    return {mac,windows,output};
+  }
+  root.StudioProtocol={escapeXML,azureSSML,buildRequest,filename,shellExamples};
 })(typeof module==='object'&&module.exports?module.exports:window);

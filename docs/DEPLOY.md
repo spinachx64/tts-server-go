@@ -78,6 +78,8 @@ NO_PROXY=127.0.0.1,localhost
 
 更改 `TTS_PORT` 时，GitHub 变量 `COOK_API_PORT` 也必须同步修改，部署脚本用它进行健康检查。
 
+需要按用户分发 Token 时，见 [SQLite Token 配置](TOKENS.md)。使用 `TTS_TOKEN_DB` 时清空 `TTS_TOKEN`，由外部程序管理数据库。
+
 ## 3. 准备独立的 SSH 部署密钥
 
 在本机生成专用密钥，保持私钥无口令，以便 Actions 非交互运行：

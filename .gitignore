@@ -7,3 +7,8 @@
 /cook-tts-deploy
 /cook-tts-deploy.pub
 /cook-known-hosts
+
+# Token databases
+*.db
+*.db-wal
+*.db-shm

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"crypto/subtle"
 	"encoding/json"
 	"io"
 	"mime"
@@ -21,10 +20,10 @@ func jsonError(w http.ResponseWriter, status int, err string) {
 }
 
 func (s *GracefulServer) edgeAPIHandler(w http.ResponseWriter, r *http.Request) {
-	if s.Token != "" && subtle.ConstantTimeCompare([]byte(s.Token), []byte(r.Header.Get("Token"))) != 1 {
-		jsonError(w, 401, "无效的Token")
+	if !s.verifyToken(w, r) {
 		return
 	}
+
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", "POST")
 		jsonError(w, 405, "请使用 POST")
