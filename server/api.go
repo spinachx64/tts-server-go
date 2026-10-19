@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/jing332/tts-server-go/internal/tokenstore"
 	"github.com/jing332/tts-server-go/tts/azure"
 	"github.com/jing332/tts-server-go/tts/creation"
 	log "github.com/sirupsen/logrus"
@@ -24,6 +25,8 @@ import (
 
 type GracefulServer struct {
 	Token          string
+	AdminToken     string
+	TokenManager   *tokenstore.Manager
 	TokenValidator interface {
 		Valid(context.Context, string) (bool, error)
 	}
@@ -47,6 +50,8 @@ func (s *GracefulServer) HandleFunc() {
 	if s.serveMux == nil {
 		s.serveMux = &http.ServeMux{}
 	}
+
+	s.serveMux.Handle("/api/tokens", http.TimeoutHandler(http.HandlerFunc(s.tokenAdminHandler), 10*time.Second, "timeout"))
 
 	webFilesFs, _ := fs.Sub(webFiles, "public")
 	s.serveMux.Handle("/", http.FileServer(http.FS(webFilesFs)))

@@ -13,7 +13,7 @@ API 请求按 JSON Lines 写入文件，每次调用一行。网页和静态文�
 | 字段 | 内容 |
 |---|---|
 | `time` / `completed_at` | 请求开始和完成时间 |
-| `username` | SQLite `tokens.user_id`；未知 Token 为 `unknown`；旧共享 Token 为 `shared`；未配置认证为 `anonymous` |
+| `username` | SQLite `tokens.user_id`；未知 Token 为 `unknown`；旧共享 Token 为 `shared`；未配置认证为 `anonymous`；管理接口认证成功为 `admin` |
 | `method` / `path` / `query` | 请求方法、API 路径、查询参数（`token` 参数脱敏） |
 | `request_body` | 上传的 JSON、SSML 或其他请求正文，换行在 JSON 中转义 |
 | `success` | HTTP 2xx/3xx 为 true，其余为 false |

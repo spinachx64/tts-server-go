@@ -136,6 +136,12 @@ func (s *GracefulServer) logAPI(next http.Handler) http.Handler {
 				user = "shared"
 			}
 		}
+		if r.URL.Path == "/api/tokens" {
+			user = "unknown"
+			if s.validAdmin(r) {
+				user = "admin"
+			}
+		}
 		originalBody := r.Body
 		if originalBody == nil {
 			originalBody = http.NoBody

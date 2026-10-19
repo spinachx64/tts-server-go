@@ -239,3 +239,7 @@ curl --get http://localhost:1233/api/legado \
 
 手机使用时，`api` 应填写手机可访问的服务器地址。
 响应字段包括 `name`、`url`、`header`、`contentType`、`id`、`lastUpdateTime` 和 `concurrentRate`。
+
+## Token 管理接口
+
+服务间调用的创建、查询用户名与截止日期、删除接口均为 `/api/tokens`，分别使用 POST / GET / DELETE；必须使用独立的管理 Token 认证。参数、状态码和示例见 [Token 管理 API](TOKENS.md#服务间-token-管理-api)。

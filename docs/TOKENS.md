@@ -1,6 +1,6 @@
 # SQLite Token 验证
 
-Web 主页仍只填写访问 Token。服务不提供创建、分发、管理 Token 的页面或 API；由外部程序维护数据库，服务以只读方式查询。启用后，Edge、Azure 和 Creation 的合成接口统一验证；首页、音色列表及阅读配置生成仍公开。
+Web 主页仍只填写访问 Token。网页不提供创建或管理功能；外部程序可直接维护数据库，也可通过专用管理 API 创建、查询和删除 Token。认证查询以只读方式进行。启用后，Edge、Azure 和 Creation 的合成接口统一验证；首页、音色列表及阅读配置生成仍公开。
 
 ## 表结构与约定
 
@@ -18,7 +18,7 @@ sqlite3 /var/lib/tts-server-go/tokens.db < internal/tokenstore/schema.sql
 | `expires_at` | UTC Unix 秒，NULL 永不过期；等于或小于当前时间即失效 |
 | `created_at` | 创建时间，默认当前 UTC Unix 秒 |
 
-分发程序生成高强度随机 Token，将原文交给用户，将哈希写入表。以下 Python 示例仅供分发程序参考，TTS 服务本身不执行：
+分发程序生成高强度随机 Token，将原文交给用户，将哈希写入表。以下 Python 示例仅供分发程序参考，手动接入示例：
 
 ```python
 import hashlib, secrets, sqlite3
@@ -53,3 +53,46 @@ TTS_TOKEN_DB=/var/lib/tts-server-go/tokens.db
 使用更新后的 `deploy/tts-server-go.service`，执行 `systemctl daemon-reload` 后重启服务。数据库不放在 releases/current 下，部署不会覆盖。分发程序拥有写权限，运行用户 `tts` 需要数据库和父目录的读/遍历权限；WAL 模式下还需能读取 `-wal`、`-shm` 文件（由分发程序保持存在，使用兼容的权限）。不要将数据库放入网页静态目录或提交到仓库。
 
 迁移时，如需保留旧 Token，由分发程序先将旧值的 SHA-256 导入表，再清空 `TTS_TOKEN` 并启用 `TTS_TOKEN_DB`。服务不会自动导入或生成 Token。
+
+## 服务间 Token 管理 API
+
+设置至少 32 字节的随机 `TTS_ADMIN_TOKEN` 环境变量（也支持 `-admin-token`）并启用 `-token-db` 后，提供以下管理接口。未配置时接口返回 404。管理 Token 不写入用户表，不可用于语音合成；普通用户 Token 也不能管理其它 Token。网页没有管理功能。
+
+生产环境在 `/etc/tts-server-go.env` 配置 `TTS_ADMIN_TOKEN`，不要把真实值写进源码、网页配置或调用示例。修改后重启服务。
+
+所有管理请求使用：
+
+```http
+Authorization: Bearer <管理Token>
+```
+
+| 方法 | 路径 | 请求内容 | 成功响应 |
+|---|---|---|---|
+| POST | `/api/tokens` | JSON：`username`、`expires_at` | 201：`token`、`username`、`expires_at`、`enabled` |
+| GET | `/api/tokens` | `Token` 请求头传待查用户 Token | 200：`username`、`expires_at`、`enabled` |
+| DELETE | `/api/tokens` | `Token` 请求头传待删用户 Token | 204，无响应正文 |
+
+`expires_at` 使用 RFC3339（如 `2125-10-19T16:14:41+08:00`），创建时必填且必须为未来时间；响应统一为 UTC。旧数据库中永不过期的记录查询时返回 `null`。用户名与数据库 `user_id` 对应，去除首尾空白，最多 128 字节。同一用户可创建多个 Token。创建时生成随机 Token，只在该次响应中返回原文；后续查询不返回 Token。删除永久移除该条 Token，随后不能再访问合成接口。
+
+macOS / Linux 示例（Windows 的其它服务按相同 HTTP 协议调用）：
+
+```sh
+ADMIN_TOKEN='替换为管理Token'
+# 创建
+curl --fail-with-body https://tts.cookup.cn/api/tokens \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  --data '{"username":"user-003","expires_at":"2125-10-19T16:14:41+08:00"}'
+
+USER_TOKEN='替换为创建响应中的token'
+# 查询用户名、截止时间、启用状态（包含过期或禁用记录）
+curl --fail-with-body https://tts.cookup.cn/api/tokens \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Token: $USER_TOKEN"
+# 删除
+curl --fail-with-body -X DELETE https://tts.cookup.cn/api/tokens \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Token: $USER_TOKEN"
+```
+
+错误：400 参数无效、401 管理认证失败、404 未启用或用户 Token 不存在、405 方法不支持、415 Content-Type 不正确、503 数据库暂不可用。所有响应设置 `Cache-Control: no-store`。管理请求日志的用户名为 `admin`（认证失败为 `unknown`），不记录认证请求头和返回的新 Token。
+
+启用管理接口后，服务需要 Token 数据库及其父目录的写权限，以创建 SQLite 事务日志；systemd 配置使用 `ReadWritePaths=/var/lib/tts-server-go`。认证查询仍使用独立只读连接。只使用外部分发程序时可以不配置管理 Token，继续只读验证。

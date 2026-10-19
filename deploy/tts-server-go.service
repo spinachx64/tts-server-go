@@ -22,8 +22,8 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-# External issuer owns this directory; service only needs read access.
-ReadOnlyPaths=-/var/lib/tts-server-go
+# Token management APIs require write access to the database directory.
+ReadWritePaths=-/var/lib/tts-server-go
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 
 [Install]
