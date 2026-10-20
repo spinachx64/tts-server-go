@@ -26,7 +26,7 @@ let subtitleURL = '';
 let busy = false;
 let voicesBusy = false;
 const samples = {
-  '中文旁白':{locale:'zh-CN',voice:'zh-CN-XiaoxiaoNeural',text:'你好，欢迎来到语音工作台。选择喜欢的声音，让每一段文字都拥有自己的表达。'},
+  '中文旁白':{locale:'zh-CN',voice:'zh-CN-XiaoxiaoNeural',text:'你好，欢迎来到酷卡语音工坊。选择喜欢的声音，让每一段文字都拥有自己的表达。'},
   '英文介绍':{locale:'en-US',voice:'en-US-EmmaMultilingualNeural',text:'Every great idea starts with a few words. Give your story a voice, and let the world hear it.'},
   '粤语问候':{locale:'zh-HK',voice:'zh-HK-HiuGaaiNeural',text:'你好，歡迎嚟到語音工作台。揀一個你鍾意嘅聲音，一齊聽見文字嘅溫度。'}
 };

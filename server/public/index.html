@@ -2,12 +2,12 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="light"><title>Voice Lab · 语音工作台</title>
+<meta name="color-scheme" content="light"><title>Voice Lab · 酷卡语音工坊</title>
 <link rel="stylesheet" href="studio.css">
 </head>
 <body>
 <aside class="sidebar">
-<a class="brand" href="/" aria-label="Voice Lab 首页"><span class="brand-icon">◖◗</span><span>Voice Lab<small>语音工作台</small></span></a>
+<a class="brand" href="/" aria-label="Voice Lab 首页"><span class="brand-icon">◖◗</span><span>Voice Lab<small>酷卡语音工坊</small></span></a>
 <div class="nav-label">WORKSPACE</div>
 <nav aria-label="渠道导航"><a id="edgeChannel" class="nav-item active" href="#edge" aria-current="page"><span>◉</span> Edge 语音<span class="nav-dot"></span></a><a id="azureChannel" class="nav-item" href="#azure"><span>◇</span> Azure 语音<span class="nav-arrow">↗</span></a></nav>
 <div class="sidebar-bottom"><div class="mini-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p>让文字，拥有声音。</p></div>
@@ -20,7 +20,7 @@
 <div class="studio-grid">
 <section class="panel editor-panel" aria-labelledby="editorTitle">
 <div class="panel-heading"><div><span class="section-number">01</span><h2 id="editorTitle">文本编辑</h2></div><button class="text-button" id="clearText" type="button">清空文本</button></div>
-<div class="editor"><label class="sr-only" for="previewText">合成文本</label><textarea id="previewText" name="previewText" spellcheck="false" placeholder="在这里写下你想听到的文字…">你好，欢迎来到语音工作台。选择喜欢的声音，让每一段文字都拥有自己的表达。</textarea><div class="editor-footer"><span>支持中文与多语言文本</span><span><strong id="charCount">0</strong> 字</span></div></div>
+<div class="editor"><label class="sr-only" for="previewText">合成文本</label><textarea id="previewText" name="previewText" spellcheck="false" placeholder="在这里写下你想听到的文字…">你好，欢迎来到酷卡语音工坊。选择喜欢的声音，让每一段文字都拥有自己的表达。</textarea><div class="editor-footer"><span>支持中文与多语言文本</span><span><strong id="charCount">0</strong> 字</span></div></div>
 <div class="sample-row"><span>试试这些</span><button type="button" data-sample="中文旁白">中文旁白</button><button type="button" data-sample="英文介绍">英文介绍</button><button type="button" data-sample="粤语问候">粤语问候</button></div>
 <div class="editor-options"><label class="check-label" id="subtitlesControl"><input id="subtitles" type="checkbox"><span>同时生成 SRT 字幕</span></label><label class="file-label" for="textFile">↑ 导入文本<input id="textFile" type="file" accept=".txt,text/plain" class="sr-only"></label></div>
 <div class="generate-row"><button id="previewButton" class="button primary" type="button"><span id="generateIcon">▶</span><span id="generateLabel">生成并试听</span><span class="shortcut">⌘ ↵</span></button><span class="generate-hint">完整合成后返回音频<br>请求最长等待 30 秒</span></div>
