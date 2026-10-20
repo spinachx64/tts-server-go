@@ -132,3 +132,5 @@ TTS_INTEGRATION_TEST=1 go test -timeout 60s ./tts/edge ./tts/azure ./tts/creatio
 网页调用示例的域名配置在 `server/public/config.js` 的 `apiBaseURL`，当前为 `https://tts.cookup.cn`。此文件公开提供给浏览器，请勿写入 Token 或密钥。修改后重新构建部署生效；网页试听请求仍发送到当前站点。
 
 API 按天记录请求内容、用户名、成功/失败与错误码，配置及回收方式见 [调用日志](docs/LOGGING.md)。
+
+手动批量生成和续期见 [离线 Token 管理工具](docs/TOKEN-TOOL.md)。网页示例区提供 [macOS / Windows Agent Skill](docs/AGENT-SKILLS.md) 下载，两种渠道共用，失败后最多重试 3 次。

@@ -14,3 +14,5 @@
 .voice-reference{padding:22px 25px;border-top:1px solid var(--line)}.voice-reference h3{font-size:13px;margin:0 0 10px}.voice-reference p{font-size:11px;line-height:1.8;color:#78876f;margin:8px 0 14px}.voice-table-wrap{overflow-x:auto}.voice-reference table{width:100%;border-collapse:collapse;font-size:12px;text-align:left}.voice-reference th,.voice-reference td{padding:12px;border-bottom:1px solid var(--line);white-space:nowrap}.voice-reference th{color:#78876f;font-weight:550;background:#f7f9f3}.voice-reference code{font-size:11px}@media(max-width:780px){.voice-reference{padding:20px 21px}}
 
 .voice-reference audio.voice-sample{width:210px;min-width:180px;height:34px;margin:0}.voice-reference .sample-text{padding:12px 14px;background:#f7f9f3;border-radius:8px}
+
+.skill-downloads{margin:18px 0;padding:18px;background:#f3f7ef;border:1px solid var(--line);border-radius:10px}.skill-downloads strong{font-size:12px}.skill-downloads p{margin-bottom:12px}.skill-download-links{display:flex;gap:10px;flex-wrap:wrap}.skill-downloads small{color:#78876f}

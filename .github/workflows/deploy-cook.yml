@@ -12,6 +12,10 @@ on:
       - 'deploy/**'
       - 'scripts/test_deploy.sh'
       - 'scripts/test_studio.js'
+      - 'skills/**'
+      - 'tools/**'
+      - 'tests/**'
+      - 'scripts/package_skills.py'
       - '.github/workflows/deploy-cook.yml'
   pull_request:
     branches: [master]
@@ -42,6 +46,8 @@ jobs:
           go vet ./...
           go test -race -timeout 60s ./server ./tts/edge ./internal/tokenstore
           node scripts/test_studio.js
+          python3 scripts/package_skills.py --check
+          python3 -m unittest discover -s tests -p "test_*.py"
           bash scripts/test_deploy.sh
       - name: Build Linux amd64 binary
         env:

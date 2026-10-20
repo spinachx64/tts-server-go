@@ -16,3 +16,7 @@
 # API request logs
 /logs/
 *.jsonl
+
+# Python bytecode
+__pycache__/
+*.pyc

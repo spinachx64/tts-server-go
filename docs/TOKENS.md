@@ -17,6 +17,7 @@ sqlite3 /opt/tts-server-go/data/tokens.db < internal/tokenstore/schema.sql
 | `enabled` | 1 有效，0 禁用 |
 | `expires_at` | UTC Unix 秒，NULL 永不过期；等于或小于当前时间即失效 |
 | `created_at` | 创建时间，默认当前 UTC Unix 秒 |
+| `note` | 备注，默认空字符串，由离线管理工具维护 |
 
 分发程序生成高强度随机 Token，将原文交给用户，将哈希写入表。以下 Python 示例仅供分发程序参考，手动接入示例：
 
@@ -104,3 +105,5 @@ ssh cook 'sudo cat /opt/project-config/tts-server-go/admin-token'
 ```
 
 统一配置目录按 `/opt/project-config/<项目名>/` 分隔，目录权限 `0700`、凭据文件 `0600`，由 root 管理。运行环境中的 `TTS_ADMIN_TOKEN` 仍配置在 `/opt/project-config/tts-server-go/service.env`；轮换时需要同步更新并重启服务。不要将服务器凭据目录提交到 GitHub。
+
+批量生成、续期、备注与启停删除可使用 [离线 Token 管理工具](TOKEN-TOOL.md)，直接读写数据库，无需调用管理 API。
