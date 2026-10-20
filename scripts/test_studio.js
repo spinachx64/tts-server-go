@@ -85,7 +85,7 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
  // A slow Edge response must not overwrite Azure's voice list after switching.
  sandbox.location.hash='#azure';windowEvents.hashchange();
  assert(samplePlayers.every(el=>el.paused&&el.src.startsWith('/voice-samples/azure/')));
- assert.equal(calls[1].url,'/api/azure/voices');assert.equal(elements.endpointPath.textContent,'/api/azure');assert(elements.subtitlesControl.hidden);
+ assert.equal(calls[1].url,'/api/azure/voices');assert(elements.subtitlesControl.hidden);
  pending[1](response(azureList));await flush();pending[0](response({voices:edgeList}));await flush();
  assert.equal(elements.styleName.disabled,false);assert.equal(elements.roleName.disabled,false);assert.equal(elements.secondaryLocaleField.hidden,false);
  elements.styleName.value='cheerful';elements.styleName.listeners.change();elements.roleName.value='Narrator';elements.roleName.listeners.change();

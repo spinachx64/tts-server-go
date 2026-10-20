@@ -58,7 +58,6 @@ function switchChannel(next,initial=false) {
   for(const name of ['edge','azure']) {const el=byId(name+'Channel');el.classList.toggle('active',name===channel);if(name===channel)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');}
   byId('channelTitle').textContent=azure?'Azure 语音':'Edge 语音';
   byId('channelTag').textContent=azure?'Azure 演示服务':'Microsoft Edge';
-  byId('endpointPath').textContent=azure?'/api/azure':'/api/ra';
   byId('requestTitle').textContent=azure?'查看 SSML 请求':'查看 JSON 请求';
   byId('azureOptions').hidden=!azure;byId('subtitlesControl').hidden=azure;
   byId('voiceFormat').replaceChildren(...(azure?azureFormats:edgeFormats).map(f=>new Option(formatLabel(f),f)));
