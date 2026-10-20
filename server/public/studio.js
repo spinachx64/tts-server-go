@@ -54,7 +54,7 @@ function switchChannel(next,initial=false) {
   byId('channelTag').textContent=azure?'Azure 演示服务':'Microsoft Edge';
   byId('endpointPath').textContent=azure?'/api/azure':'/api/ra';
   byId('requestTitle').textContent=azure?'查看 SSML 请求':'查看 JSON 请求';
-  byId('azureOptions').hidden=!azure;byId('subtitlesControl').hidden=azure;byId('proxyField').hidden=azure;
+  byId('azureOptions').hidden=!azure;byId('subtitlesControl').hidden=azure;
   byId('voiceFormat').replaceChildren(...(azure?azureFormats:edgeFormats).map(f=>new Option(formatLabel(f),f)));
   const settings=channelSettings[channel];
   for(const id of ['rate','volume','pitch'])byId(id).value=settings[id]||'0';
@@ -146,7 +146,7 @@ async function loadVoices() {
   try {
     let response;
     if(selected==='azure') response=await fetch('/api/azure/voices',{signal:controller.signal});
-    else {const request={list_voices:true};if(byId('proxy').value.trim())request.proxy=byId('proxy').value.trim();response=await fetch('/api/ra',{method:'POST',headers:headers(),body:JSON.stringify(request),signal:controller.signal});}
+    else {const request={list_voices:true};response=await fetch('/api/ra',{method:'POST',headers:headers(),body:JSON.stringify(request),signal:controller.signal});}
     if(sequence!==voiceSequence)return;
     if(!response.ok)throw new Error(await requestError(response));
     const result=await response.json();const list=selected==='azure'?result:result.voices;
@@ -162,7 +162,6 @@ function payload() {
   const result={text:byId('previewText').value,voice:byId('voiceName').value,rate:signed(byId('rate').value,'%'),volume:signed(byId('volume').value,'%'),pitch:signed(byId('pitch').value,'Hz'),format:byId('voiceFormat').value,response_format:byId('subtitles').checked?'json':'audio'};
   if(channel==='azure')return {...result,response_format:'audio',style:byId('styleName').value||'general',styleDegree:byId('styleDegree').value,role:byId('roleName').value||'default',secondaryLocale:byId('secondaryLocale').value};
   if (byId('subtitles').checked) result.write_subtitles=true;
-  if (byId('proxy').value.trim()) result.proxy=byId('proxy').value.trim();
   return result;
 }
 function updateRequest() {
@@ -223,7 +222,7 @@ async function copyText(text,button) {
 byId('previewText').addEventListener('input',updateRequest);
 byId('clearText').addEventListener('click',()=>{byId('previewText').value='';updateRequest();byId('previewText').focus();});
 byId('language').addEventListener('change',()=>refreshVoices());byId('voiceName').addEventListener('change',updateVoice);
-for (const id of ['rate','volume','pitch','proxy','styleDegree']) byId(id).addEventListener('input',updateRequest);
+for (const id of ['rate','volume','pitch','styleDegree']) byId(id).addEventListener('input',updateRequest);
 byId('voiceFormat').addEventListener('change',()=>{if (byId('subtitles').checked && byId('voiceFormat').value!=='audio-24khz-48kbitrate-mono-mp3') {byId('subtitles').checked=false;notice('此格式不支持字幕，已关闭 SRT 生成。','warning');}updateRequest();});
 byId('subtitles').addEventListener('change',()=>{if (byId('subtitles').checked){byId('voiceFormat').value='audio-24khz-48kbitrate-mono-mp3';}updateRequest();});
 byId('resetSettings').addEventListener('click',()=>{for (const id of ['rate','volume','pitch']) byId(id).value=0;byId('voiceFormat').value='audio-24khz-48kbitrate-mono-mp3';byId('subtitles').checked=false;byId('styleName').value='general';byId('styleDegree').value='1';byId('styleDegree').disabled=true;byId('roleName').value='default';byId('secondaryLocale').value='';saveChannelSettings();updateRequest();notice('声音参数已恢复默认值。');});
