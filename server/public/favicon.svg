@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>酷卡语音工坊</title>
+  <rect width="64" height="64" rx="15" fill="#35634e"/>
+  <g fill="none" stroke="#eff4d9" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 25v14M30 18v28M44 21 32 32l12 11"/>
+  </g>
+</svg>
