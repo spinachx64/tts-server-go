@@ -113,7 +113,7 @@ function refreshVoices(preferred=byId('voiceName').value) {
   const filtered=voices.filter(v=>v.Locale===byId('language').value);
   byId('voiceName').replaceChildren(...filtered.map(v=>new Option(voiceLabel(v)+' · '+(v.Gender==='Male'?'男声':'女声'),v.ShortName)));
   if (filtered.some(v=>v.ShortName===preferred)) byId('voiceName').value=preferred;
-  byId('voiceCount').textContent=voiceSource+' · '+filtered.length+' 个音色';
+  byId('voiceCount').textContent=voiceSource+' · '+filtered.length+' 个音色 · 拉到页底可试听';
   updateVoice();
 }
 function updateVoice() {
@@ -145,7 +145,7 @@ async function requestError(response) {
 }
 async function loadVoices() {
   if(voicesBusy)return;
-  voicesBusy=true;byId('reloadVoices').disabled=true;byId('voiceCount').textContent='加载中…';
+  voicesBusy=true;byId('reloadVoices').disabled=true;byId('voiceCount').textContent='加载中… · 拉到页底可试听';
   const selected=channel;const sequence=++voiceSequence;
   const controller=new AbortController();voiceController=controller;const timer=setTimeout(()=>controller.abort(),35000);
   try {
