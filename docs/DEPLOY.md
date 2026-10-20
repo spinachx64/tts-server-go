@@ -213,3 +213,27 @@ Creation 当前上游认证失败，因此全渠道脚本可能返回 1；请查
 | `/opt/project-config/tts-server-go/backups` | 历史配置备份 | root 专用 |
 
 首次安装创建数据、日志和配置目录。已有旧 `/etc/tts-server-go.env` 的服务器，应先停止服务，将配置、数据库及日志移动到上表路径，并更新 `TTS_TOKEN_DB`，安装新版 unit 后 `systemctl daemon-reload` 并启动服务；安装脚本会拒绝直接覆盖旧布局。部署发布只切换二进制，不移动或覆盖上述持久化目录。systemd unit、sudoers、Nginx 系统日志等系统管理文件仍按系统标准路径存放。
+
+## 预生成音色试听
+
+主页普通话音色表提供 Edge、Azure 各 6 段 MP3，使用相同文本和默认参数。音频放在 `/opt/tts-server-go/samples/{edge,azure}/<音色名>.mp3`，独立于 releases，更新程序不会删除。`manifest.json` 保存文本、格式和参数，不含访问凭据。
+
+通过 `scripts/generate_voice_samples.py` 调用现有服务预生成；该脚本从环境变量 `TTS_SAMPLE_TOKEN` 读取普通用户 Token，默认连接 `http://127.0.0.1:1233`。已有有效文件自动复用，传 `--force` 可重新生成。不要将实际 Token 写进脚本或仓库。
+
+```sh
+# 在服务器设置 TTS_SAMPLE_TOKEN 后执行
+python3 scripts/generate_voice_samples.py --output /opt/tts-server-go/samples
+```
+
+Nginx 在 HTTPS server 块配置公开静态路由：
+
+```nginx
+location ^~ /voice-samples/ {
+    alias /opt/tts-server-go/samples/;
+    autoindex off;
+    expires 1d;
+    limit_except GET { deny all; }
+}
+```
+
+浏览器使用原生音频播放控件和 HTTP Range 读取文件，点击试听不调用合成接口，不需要用户 Token；切换渠道后对应试听路径同步更新。生成脚本需要有效用户 Token，且上游渠道可用。音频目录及父目录须允许 Nginx 读取/遍历（目录 0755，文件 0644）。

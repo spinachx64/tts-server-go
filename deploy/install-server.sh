@@ -16,6 +16,7 @@ id ttsdeploy >/dev/null 2>&1 || useradd --create-home --user-group --shell /bin/
 install -d -o ttsdeploy -g ttsdeploy -m 755 /opt/tts-server-go /opt/tts-server-go/releases
 install -d -o ttsdeploy -g ttsdeploy -m 700 /opt/tts-server-go/incoming
 install -d -o tts -g tts -m 750 /opt/tts-server-go/data /opt/tts-server-go/logs
+install -d -o root -g root -m 755 /opt/tts-server-go/samples
 install -d -o root -g root -m 700 /opt/project-config "$config_dir"
 install -d -o root -g root -m 755 /usr/local/libexec
 install -o root -g root -m 755 "$script_dir/deploy-release.sh" /usr/local/libexec/tts-server-go-deploy

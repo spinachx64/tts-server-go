@@ -12,3 +12,5 @@
 .footer .icp-record{display:inline;color:inherit;text-decoration:none}.footer .icp-record:hover{text-decoration:underline}@media(max-width:780px){.footer{flex-wrap:wrap;gap:12px}}
 
 .voice-reference{padding:22px 25px;border-top:1px solid var(--line)}.voice-reference h3{font-size:13px;margin:0 0 10px}.voice-reference p{font-size:11px;line-height:1.8;color:#78876f;margin:8px 0 14px}.voice-table-wrap{overflow-x:auto}.voice-reference table{width:100%;border-collapse:collapse;font-size:12px;text-align:left}.voice-reference th,.voice-reference td{padding:12px;border-bottom:1px solid var(--line);white-space:nowrap}.voice-reference th{color:#78876f;font-weight:550;background:#f7f9f3}.voice-reference code{font-size:11px}@media(max-width:780px){.voice-reference{padding:20px 21px}}
+
+.voice-reference audio.voice-sample{width:210px;min-width:180px;height:34px;margin:0}.voice-reference .sample-text{padding:12px 14px;background:#f7f9f3;border-radius:8px}

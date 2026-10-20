@@ -35,14 +35,14 @@ try {
 // This checks channel isolation and asynchronous voice-list races, without a browser.
 const html=fs.readFileSync(path.join(__dirname,'../server/public/index.html'),'utf8');
 class Element {
- constructor(id,tag,attrs){this.id=id;this.tag=tag;this._value=attrs.value||'';this.hidden='hidden' in attrs;this.checked=false;this.disabled=false;this.textContent='';this.options=[];this.listeners={};this.classList={toggle(){},add(){},remove(){}};this.attributes={};}
+ constructor(id,tag,attrs){this.id=id;this.tag=tag;this._value=attrs.value||'';this.hidden='hidden' in attrs;this.checked=false;this.disabled=false;this.textContent='';this.options=[];this.listeners={};this.classList={toggle(){},add(){},remove(){}};this.attributes={...attrs};this.paused=true;}
  get value(){return this._value;}
  set value(v){this._value=String(v);}
  replaceChildren(...options){this.options=options;if(this.tag==='select')this._value=options[0]?.value||'';}
  addEventListener(name,fn){this.listeners[name]=fn;}
  setAttribute(name,value){this.attributes[name]=value;}
  removeAttribute(name){delete this.attributes[name];}
- pause(){} load(){} focus(){} closest(){return {open:false};}
+ pause(){this.paused=true;} play(){this.paused=false;this.listeners.play?.();return Promise.resolve();} getAttribute(name){return this.attributes[name]||null;} load(){} focus(){} closest(){return {open:false};}
 }
 const elements={};
 for(const match of html.matchAll(/<([a-z]+)\b([^>]*\bid="([^"]+)"[^>]*)>/g)){
@@ -52,7 +52,7 @@ for(const match of html.matchAll(/<([a-z]+)\b([^>]*\bid="([^"]+)"[^>]*)>/g)){
 elements.previewText.value='测试文字';
 const calls=[];const pending=[];const windowEvents={};
 const savedStorage=new Map([["token","remembered-user-token"]]);
-const sandbox={console,AbortController,setTimeout,clearTimeout,URL,URLSearchParams,Option:class {constructor(text,value){this.text=text;this.value=value;}},document:{getElementById:id=>{assert(elements[id],'missing '+id);return elements[id];},querySelectorAll:()=>[],addEventListener(){}},window:{addEventListener:(name,fn)=>windowEvents[name]=fn},location:{hash:'#edge',origin:'http://localhost:1233'},history:{replaceState(){}},localStorage:{getItem:key=>savedStorage.get(key)||null,setItem:(key,value)=>savedStorage.set(key,value),removeItem:key=>savedStorage.delete(key)},fetch:(url,options)=>{calls.push({url,options});return new Promise(resolve=>pending.push(resolve));}};
+const sandbox={console,AbortController,setTimeout,clearTimeout,URL,URLSearchParams,Option:class {constructor(text,value){this.text=text;this.value=value;}},document:{getElementById:id=>{assert(elements[id],'missing '+id);return elements[id];},querySelectorAll:selector=>selector==='audio[data-voice-sample]'?Object.values(elements).filter(el=>el.tag==='audio'&&el.attributes['data-voice-sample']):[],addEventListener(){}},window:{addEventListener:(name,fn)=>windowEvents[name]=fn},location:{hash:'#edge',origin:'http://localhost:1233'},history:{replaceState(){}},localStorage:{getItem:key=>savedStorage.get(key)||null,setItem:(key,value)=>savedStorage.set(key,value),removeItem:key=>savedStorage.delete(key)},fetch:(url,options)=>{calls.push({url,options});return new Promise(resolve=>pending.push(resolve));}};
 sandbox.StudioProtocol=protocol;
 vm.createContext(sandbox);vm.runInContext(fs.readFileSync(path.join(__dirname,'../server/public/config.js'),'utf8'),sandbox);vm.runInContext(fs.readFileSync(path.join(__dirname,'../server/public/studio.js'),'utf8'),sandbox);
 const edgeList=[{ShortName:'zh-CN-XiaoxiaoNeural',Locale:'zh-CN',Gender:'Female'}];
@@ -60,6 +60,14 @@ const azureList=[{...edgeList[0],LocalName:'晓晓',StyleList:['cheerful'],RoleP
 const response=data=>({ok:true,json:async()=>data});
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 (async()=>{
+ const samplePlayers=Object.values(elements).filter(el=>el.tag==='audio'&&el.attributes['data-voice-sample']);
+ assert.equal(samplePlayers.length,6);
+ assert(samplePlayers.every(el=>el.src.startsWith('/voice-samples/edge/')));
+ const initialCalls=calls.length;
+ elements.audioPlayer.play();samplePlayers[0].play();assert(elements.audioPlayer.paused);
+ samplePlayers[1].play();assert(samplePlayers[0].paused);assert(!samplePlayers[1].paused);
+ elements.audioPlayer.play();assert(samplePlayers.every(el=>el.paused));
+ assert.equal(calls.length,initialCalls,'static previews must not call synthesis APIs');
  assert.equal(elements.token.value,'remembered-user-token');
  assert.equal(calls[0].options.headers.Token,'remembered-user-token');
  elements.token.value='new-user-token';elements.token.listeners.input();
@@ -76,6 +84,7 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
  assert.equal(calls[0].url,'/api/ra');assert.equal(JSON.parse(calls[0].options.body).list_voices,true);
  // A slow Edge response must not overwrite Azure's voice list after switching.
  sandbox.location.hash='#azure';windowEvents.hashchange();
+ assert(samplePlayers.every(el=>el.paused&&el.src.startsWith('/voice-samples/azure/')));
  assert.equal(calls[1].url,'/api/azure/voices');assert.equal(elements.endpointPath.textContent,'/api/azure');assert(elements.subtitlesControl.hidden);
  pending[1](response(azureList));await flush();pending[0](response({voices:edgeList}));await flush();
  assert.equal(elements.styleName.disabled,false);assert.equal(elements.roleName.disabled,false);assert.equal(elements.secondaryLocaleField.hidden,false);

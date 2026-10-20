@@ -49,6 +49,12 @@ function switchChannel(next,initial=false) {
   ++voiceSequence;voicesBusy=false;byId('reloadVoices').disabled=false;
   channel=next;
   const azure=channel==='azure';
+  byId('voiceSampleChannel').textContent=azure?'Azure':'Edge';
+  for(const player of document.querySelectorAll('audio[data-voice-sample]')) {
+    player.pause();
+    player.src='/voice-samples/'+channel+'/'+player.getAttribute('data-voice-sample')+'.mp3';
+    player.load();
+  }
   for(const name of ['edge','azure']) {const el=byId(name+'Channel');el.classList.toggle('active',name===channel);if(name===channel)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');}
   byId('channelTitle').textContent=azure?'Azure 语音':'Edge 语音';
   byId('channelTag').textContent=azure?'Azure 演示服务':'Microsoft Edge';
@@ -247,6 +253,15 @@ byId('copyWindowsShell').addEventListener('click',event=>copyText(byId('windowsS
 byId('copyRequest').addEventListener('click',event=>copyText(byId('requestPreview').textContent,event.currentTarget));
 byId('textFile').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;try{if(file.size>2*1024*1024)throw new Error('文本文件不能超过 2 MiB。');byId('previewText').value=await file.text();updateRequest();notice('已导入 '+file.name+'。');}catch(error){notice(error.message,'error');}finally{event.target.value='';}});
 document.addEventListener('keydown',event=>{if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){event.preventDefault();generate();}});
+const voiceSamplePlayers=[...document.querySelectorAll('audio[data-voice-sample]')];
+for(const player of voiceSamplePlayers) {
+  player.addEventListener('play',()=>{
+    byId('audioPlayer').pause();
+    for(const other of voiceSamplePlayers)if(other!==player)other.pause();
+  });
+  player.addEventListener('error',()=>notice('试听音频暂时无法播放，请稍后重试。','warning'));
+}
+byId('audioPlayer').addEventListener('play',()=>{for(const player of voiceSamplePlayers)player.pause();});
 byId('audioPlayer').addEventListener('error',()=>notice('浏览器无法播放此格式，可下载音频或切换到 MP3 重试。','warning'));
 window.addEventListener('pagehide',()=>{if(audioURL)URL.revokeObjectURL(audioURL);if(subtitleURL)URL.revokeObjectURL(subtitleURL);});
 try{byId('token').value=localStorage.getItem('token')||'';}catch(_){}
